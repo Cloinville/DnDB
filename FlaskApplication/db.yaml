@@ -1,0 +1,4 @@
+mysql_host: 'csuci-kloomis.cikeys.com'
+mysql_user: 'csuciklo_dndb_root'
+mysql_password: 'WeareabsolutelygonnagetanA+'
+mysql_db: 'csuciklo_dndb'
