@@ -1,7 +1,7 @@
 USE csuciklo_dndb;
 
 -- # Saved list of all table drops for cleaning while finalizing structure
--- # TODO: Remove this once no longer needed
+-- # TODO: Remove this once no longer needed, BEFORE final submission!
 --
 -- DROP TABLE levelallocation;
 -- DROP TABLE classlearnablespell;
