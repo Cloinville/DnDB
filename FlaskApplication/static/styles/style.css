@@ -22,7 +22,7 @@ header.page{
 .nav-bar
 {
     background-color: #000;
-    height: 100px;
+    height: 141px;
 }
 
 .nav-bar h1
@@ -88,7 +88,7 @@ header.page{
 
 .signup_box{
     width: 320px;
-    height: 600px;
+    height: 580px;
     background: #000;
     color: #fff;
     top: 55%;
@@ -180,4 +180,83 @@ header.page{
     visibility: visible;
     color:#df2020;
     font-size: 12px;
+}
+
+.grid-container{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 100px;
+    width: 600px;
+    margin: auto;
+    height:300px;
+    line-height: 50px;
+    margin-top: 25px;
+}
+
+.grid-container a, button{
+    display:block;
+    text-decoration: none;
+    color:white;
+    background-color: black;
+    height:100px;
+    text-align: center;
+    width: 250px;
+    font-family: sans-serif;
+    font-size: 30px;
+    border: none;
+    border-radius: 10px;
+}
+
+.grid-container button:hover{
+    cursor: pointer;
+    background-color: white;
+    color: black;
+    transition: .2s;
+}
+.campaign_previews{
+    height: 400px;
+    width: 600px;
+    margin: auto;
+    margin-top: 25px;
+    overflow: auto;
+    scrollbar-width: none;
+    display:grid;
+    grid-gap: 20px;
+}
+
+.preview-item{
+    height: 100px;
+}
+
+.campaign_previews button{
+    width: 90%;
+    height: auto;
+    margin: auto;
+    padding: 20px;
+}
+
+.preview-item h1{
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.preview-item p{
+    font-size: 24px;
+    padding-top: 20px;
+    color: #ccc;
+}
+
+.page_title{
+    font-size: 80px;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    padding:25px;
+}
+
+.campaign_previews button:hover{
+    cursor: pointer;
+    background: white;
+    color: black;
+    transition: .2s;
 }

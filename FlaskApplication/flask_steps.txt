@@ -1,4 +1,8 @@
 1. pip3 install flask
 2. pip3 install flask-mysqldb
+3. python3 .\flask_app.py
+4. In browser, navigate to localhost:5000/index
+
 **NOTE: flask python application CANNOT be named flask.py, else conflicts**
-3. create 'templates' folder in same folder as flask_app.py, for use by render_templates: will hold html files for each page of the application
+** 'templates' folder in same folder as flask_app.py, for use by render_templates: will hold html files for each page of the application;
+** 'static/styles' folder to hold .css pages

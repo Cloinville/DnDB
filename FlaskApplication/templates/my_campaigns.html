@@ -1,0 +1,33 @@
+<html>
+    <head>
+        <title> DnDB Campaigns </title>
+        <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <header class="page">
+            <div class="nav-bar">
+                <h1>DnDB</h1>
+                <ul class="menu">
+                    <li><a href="{{ url_for('my_campaigns') }}">Home</a></li>
+                    <li><a href="#">My Campaigns</a></li>
+                    <li><a href="{{ url_for('my_creations') }}">My Creations</a></li>
+                    <li><a href="{{ url_for('create') }}">Create</a></li>
+                    <li><a href="{{ url_for('search') }}">Search</a></li>
+                </ul>
+            </div>
+        </header>
+        <h1 class="page_title">My Campaigns</h1>
+        <div class="campaign_previews">
+            {% for campaign in campaign_preview_details %}
+            <div class="preview-item">
+                <form method="POST" action=""}>
+                    <button name="campaign_btn" value={{campaign[0]}}>
+                        <h1>{{campaign[1]}}</h1>
+                        <p>Party: {{campaign[2]}}</p>
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </body>
+</html>

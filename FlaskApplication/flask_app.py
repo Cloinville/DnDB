@@ -1,14 +1,16 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, url_for
 # from flask_mysqldb import MySQL
 import mysql.connector
 import yaml
 import re
+import json
 
 app = Flask(__name__)
 
 # configure db
 connection_values = yaml.load(open('db.yaml'))
 logged_in_user = None
+session = {'logged_in_user': None, 'messages': ""}
 
 # add try-except for db
 
@@ -64,6 +66,9 @@ def login():
 @app.route('/signup', methods=['POST', 'GET'])
 def signup():
     error = None
+    if logged_in_user != None:
+        return redirect('/index')
+
     if request.method == 'POST':
         # trying to sign up
         player_details = request.form
@@ -103,6 +108,100 @@ def index():
     if logged_in_user == None:
         return redirect('/login')
     return render_template('index.html')
+
+
+@app.route('/my_campaigns', methods=['POST', 'GET'])
+def my_campaigns():
+    if logged_in_user == None:
+        return redirect('/login')
+
+    if request.method == 'POST':
+        # collect details for that campaign
+        # db = connect()
+        # cursor = db.cursor()
+        
+        campaign_id = request.form['campaign_btn']
+
+        # messages = json.dumps({"main": "{0}".format(str_campaign_id)})
+        # global session
+        # session['messages'] = messages
+        # print("ID: {0}".format(str_id))
+        # campaign_id = request.form['campaign_id']
+        
+        # # TODO: db get command for given campaign -> db side to decide procedure return for this
+        # result = cursor.execute("")
+        # campaign_details = cursor.fetchall()
+        # cursor.close()
+        # db.close()
+
+        # if len(campaign_details) > 0:
+        # return redirect('/campaign_details', campaign_details)
+        return redirect(url_for('campaign_details', campaign_id=campaign_id))
+
+    # get campaigns for that user
+    db = connect()
+    cursor = db.cursor()
+    cursor.callproc('get_campaign_previews', [logged_in_user, ])
+    campaign_preview_details = []
+    for result in cursor.stored_results():
+        curr_result_lists = result.fetchall()
+        for result_list in curr_result_lists:
+            campaign_preview_details.append(result_list)
+    cursor.close()
+    db.close()
+
+    # campaign_preview_details = []
+    # for campaign in campaign_stored_results:
+    #     for detail in campaign:
+    #         campaign_preview_details.append(detail)
+
+    return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details)
+
+# TODO: check this....
+@app.route('/campaign_details')
+def campaign_details():
+    #TODO: add redirect for if have no campaign args?
+    try:
+        str_campaign_id=request.args.get('campaign_id')
+        campaign_id = int(str_campaign_id)
+    except:
+        return redirect('/index')
+
+    # 4-25 TODO: add actual fetch of campaign view
+    # => DB-side: need to add procedure to fetch public OR private view,
+    #    depending on whether/not are dm (full view of all),
+    #    or are a player (view is dependent ON THAT PLAYER)
+
+    #TODO: replace this, just a stub for now
+    campaign_details = [campaign_id]
+        
+    # db = connect()
+    # cursor = db.cursor()
+    # cursor.execute()
+    # # need to redo how campaign_details is set up -> one list item per FIELD in a SINGLE RECORD
+    # campaign_details = cursor.fetchall()
+    # cursor.close()
+    # db.close()
+
+    return render_template('campaign_details.html', campaign_details=campaign_details)
+
+
+#TODO: stub
+@app.route('/my_creations')
+def my_creations():
+    return render_template('my_creations.html')
+
+
+#TODO: stub
+@app.route('/create')
+def create():
+    return render_template('create.html')
+
+
+#TODO: stub
+@app.route('/search')
+def search():
+    return render_template('search.html')
 
 
 # TODO: delete this eventually
