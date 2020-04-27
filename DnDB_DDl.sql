@@ -281,8 +281,7 @@ CREATE TABLE learnedspell(
 CREATE TABLE class(
 	class_id SMALLINT PRIMARY KEY AUTO_INCREMENT,
     class_name VARCHAR(24) NOT NULL,
-    class_description TEXT DEFAULT NULL,
-    class_hit_die ENUM("d4", "d6", "d8", "d10", "d12") NOT NULL DEFAULT "d4"
+    class_hit_die VARCHAR(2) NOT NULL DEFAULT "d4"
 )ENGINE=InnoDB;
 
 CREATE TABLE classlevelnewspellscount(
