@@ -157,7 +157,7 @@ def search():
 
     if request.method == 'POST':
         chosen_entity = request.form['chosen_entity']
-        search_fields_url = "search_fields_template/{0}".format(chosen_entity)
+        search_fields_url = "search_fields_template/{0}".format(chosen_entity.lower())
         print(chosen_entity)
 
         return render_template('search.html', entities=searchable_entities, chosen_entity=chosen_entity, search_fields_link=search_fields_url)
