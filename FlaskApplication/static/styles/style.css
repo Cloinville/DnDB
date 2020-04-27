@@ -260,3 +260,7 @@ header.page{
     color: black;
     transition: .2s;
 }
+
+iframe{
+    border: none;
+}

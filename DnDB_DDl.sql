@@ -43,7 +43,8 @@ USE csuciklo_dndb;
 CREATE TABLE player(
 	player_id INT(10) PRIMARY KEY AUTO_INCREMENT,
     player_username VARCHAR(32) UNIQUE NOT NULL,
-    player_nickname VARCHAR(128) NOT NULL
+    player_nickname VARCHAR(128) NOT NULL,
+    player_password VARCHAR(32) NOT NULL
 )ENGINE=InnoDB;
 
 CREATE TABLE dungeonmaster(
@@ -74,6 +75,7 @@ CREATE TABLE ability(
 
 CREATE TABLE skill(
 	skill_id TINYINT PRIMARY KEY AUTO_INCREMENT,
+    skill_name VARCHAR(64) NOT NULL,
     skill_description TEXT DEFAULT NULL,
     skill_is_trained_only BOOLEAN DEFAULT FALSE,
     ability_id TINYINT DEFAULT NULL
@@ -81,6 +83,7 @@ CREATE TABLE skill(
 
 CREATE TABLE monster(
 	monster_id INT(10) PRIMARY KEY AUTO_INCREMENT,
+    monster_name VARCHAR(128) DEFAULT NULL,
     monster_challenge_rating TINYINT DEFAULT NULL,
     monster_description TEXT DEFAULT NULL,
     monster_base_hp SMALLINT DEFAULT 0,

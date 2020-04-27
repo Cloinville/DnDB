@@ -10,56 +10,38 @@ app = Flask(__name__)
 # configure db
 connection_values = yaml.load(open('db.yaml'))
 logged_in_user = None
-session = {'logged_in_user': None, 'messages': ""}
+default_dropdown_str = ""
+searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item']
 
 # add try-except for db
-
-# app.config['MYSQL_HOST'] = db['mysql_host']
-# app.config['MYSQL_USER'] = db['mysql_user']
-# app.config['MYSQL_PASSWORD'] = ['mysql_password']
-# app.config['MYSQL_DB'] = ['mysql_db']
-
-# mysql = MySQL(app)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if logged_in_user != None:
         return redirect('/index')
+
     error = None
-    # Post means you're submitting info
+    # Post means have received submission from page
     if request.method == 'POST':
         db = connect()
-        playerDetails = request.form
-        # username = playerDetails['username']
-        # password = playerDetails['password']
+        player_details = request.form
 
-        # possibility: do checking currently accomplished in signup.js here, and add text to the fields that highlight red on html side, but are originally hidden
         cursor = db.cursor()
-        # TODO: update this to include password check!
-        cursor.execute("SELECT * FROM player WHERE player.player_username = '{0}' LIMIT 1".format(playerDetails['username']))
-        # cursor.execute("SELECT * FROM players WHERE player.username = '{0}' AND player.password = '{1}' LIMIT 1".format(playerDetails['username'], playerDetails['password']))
+
+        cursor.execute("SELECT * FROM player WHERE player.player_username = '{0}' AND player.player_password = '{1}' LIMIT 1".format(player_details['username'], player_details['password']))
+
         result = cursor.fetchall()
         if len(result) > 0:
-            # got a match => can log in and go to home
-            player_login(playerDetails['username'])
+            player_login(player_details['username'])
             cursor.close()
             db.close()
             return redirect('/index')
         else:
-            # show fields??
             error = "Incorrect username or password. Please try again."
-            # error - no match
-        # cursor.execute("INSERT INTO player(player_username, player_nickname) VALUES('{0}', '{1}')".format(playerDetails['username'], playerDetails['nickname']))
-        # db.commit()
-        # get 
+
         cursor.close()
         db.close()
-    # else:
-    #     # must have clicked the link??
-    #     type_requested = request.args.type
-    #     if type_requested == "redirect_to_signup":
-    #         return redirect('/signup')
-        # return what's being gotten I have no clue
+
     return render_template('login.html', error=error)
 
 
@@ -73,15 +55,14 @@ def signup():
         # trying to sign up
         player_details = request.form
         username = player_details['username']
+        nickname = player_details['nickname']
         password = player_details['password']
         password_confirm = player_details['password_confirm']
 
-        if username_invalid(username):
+        if len(username) == 0:
+            error = "Username required"
+        elif username_invalid(username):
             error = "Username can only contain alphanumerics and underscores. Please try again."
-        elif password_invalid(password):
-            error = "Password can only contain alphanumerics and underscores. Please try again."
-        elif password != password_confirm:
-            error = "Passwords don't match. Please try again"
         else:
             db = connect()
             cursor = db.cursor()
@@ -90,9 +71,18 @@ def signup():
             
             if len(result) > 0:
                 error = "Username already exists. Please try again."
+
+            elif len(password) == 0:
+                error = "Password required"
+
+            elif password_invalid(password):
+                error = "Password can only contain alphanumerics and underscores. Please try again."
+
+            elif password != password_confirm:
+                error = "Passwords don't match. Please try again"
+
             else:
-                # TODO: edit to add in nickname and password to insert
-                cursor.execute("INSERT INTO player(player_username) VALUES('{0}')".format(username))
+                cursor.execute("INSERT INTO player(player_username, player_nickname, player_password) VALUES('{0}', '{1}', '{2}')".format(username, nickname, password))
                 db.commit()
                 player_login(username)
                 return redirect('/index')
@@ -115,49 +105,19 @@ def my_campaigns():
     if logged_in_user == None:
         return redirect('/login')
 
-    if request.method == 'POST':
-        # collect details for that campaign
-        # db = connect()
-        # cursor = db.cursor()
-        
+    # If campaign preview picked, send campaign_details the id of the selected campaign
+    # to be used to generate the public/private details of that result
+    if request.method == 'POST':        
         campaign_id = request.form['campaign_btn']
-
-        # messages = json.dumps({"main": "{0}".format(str_campaign_id)})
-        # global session
-        # session['messages'] = messages
-        # print("ID: {0}".format(str_id))
-        # campaign_id = request.form['campaign_id']
-        
-        # # TODO: db get command for given campaign -> db side to decide procedure return for this
-        # result = cursor.execute("")
-        # campaign_details = cursor.fetchall()
-        # cursor.close()
-        # db.close()
-
-        # if len(campaign_details) > 0:
-        # return redirect('/campaign_details', campaign_details)
         return redirect(url_for('campaign_details', campaign_id=campaign_id))
 
-    # get campaigns for that user
-    db = connect()
-    cursor = db.cursor()
-    cursor.callproc('get_campaign_previews', [logged_in_user, ])
-    campaign_preview_details = []
-    for result in cursor.stored_results():
-        curr_result_lists = result.fetchall()
-        for result_list in curr_result_lists:
-            campaign_preview_details.append(result_list)
-    cursor.close()
-    db.close()
-
-    # campaign_preview_details = []
-    # for campaign in campaign_stored_results:
-    #     for detail in campaign:
-    #         campaign_preview_details.append(detail)
+    # Otherwise, render page with campaign previews
+    campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}')".format(logged_in_user))
 
     return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details)
 
-# TODO: check this....
+
+# TODO: 4/25: actually implement
 @app.route('/campaign_details')
 def campaign_details():
     #TODO: add redirect for if have no campaign args?
@@ -174,14 +134,6 @@ def campaign_details():
 
     #TODO: replace this, just a stub for now
     campaign_details = [campaign_id]
-        
-    # db = connect()
-    # cursor = db.cursor()
-    # cursor.execute()
-    # # need to redo how campaign_details is set up -> one list item per FIELD in a SINGLE RECORD
-    # campaign_details = cursor.fetchall()
-    # cursor.close()
-    # db.close()
 
     return render_template('campaign_details.html', campaign_details=campaign_details)
 
@@ -198,40 +150,60 @@ def create():
     return render_template('create.html')
 
 
-#TODO: stub
-@app.route('/search')
+@app.route('/search', methods=['GET', 'POST'])
 def search():
-    return render_template('search.html')
+    if logged_in_user == None:
+        return redirect('/index')
 
-
-# TODO: delete this eventually
-@app.route('/beta_index', methods=['GET', 'POST'])
-def beta_index():
     if request.method == 'POST':
-        # fetch form data
-        db = connect()
-        playerDetails = request.form
-        nickname = playerDetails['nickname']
-        username = playerDetails['username']
+        chosen_entity = request.form['chosen_entity']
+        search_fields_url = "search_fields_template/{0}".format(chosen_entity)
+        print(chosen_entity)
 
-        cursor = db.cursor()
-        cursor.execute("INSERT INTO player(player_username, player_nickname) VALUES('{0}', '{1}')".format(playerDetails['username'], playerDetails['nickname']))
-        db.commit()
-        cursor.close()
-        db.close()
-        return redirect('/players')
-    return render_template('beta_index.html')
+        return render_template('search.html', entities=searchable_entities, chosen_entity=chosen_entity, search_fields_link=search_fields_url)
+    return render_template('search.html', entities=searchable_entities, chosen_entity=searchable_entities[0], search_fields_link=None)
 
 
-# TODO: delete this eventually
-@app.route('/players')
-def players():
-    db = connect()
-    cursor = db.cursor()
-    result = cursor.execute("SELECT * FROM player")
-    playerDetails = cursor.fetchall()
-    if len(playerDetails) > 0:
-        return render_template('players.html', playerDetails=playerDetails)
+@app.route('/search_fields_template/<name>', methods=['GET', 'POST'])
+def search_fields_template(name):
+    chosen_entity = name
+   # TODO: Finish POST request handling
+    if request.method == "POST":
+        # Showing how can access the key and value of every field
+        for item in request.form:
+            print("Key: '{0}', Value:'{1}'".format(item, request.form[item]))
+        # TODO 4/26: add final REDIRECT function, to reroute the results of the 
+        #            SELECT statement created using these key-values into search results page
+        # ie. return redirect(url_for('search_results', query=query))       
+
+    attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}')".format(chosen_entity))
+    alphanumeric_attr_list = []
+    enum_attr_list = []
+    for attr_set in attr_datatype_list:
+        attr_name = attr_set[0]
+        attr_datatype = attr_set[1]
+
+        #NOTE: might need add .lower() to datatype
+        if "enum" in attr_datatype:
+            enum_vals = attr_datatype.split("enum")[1][1:-1].split(",")
+            enum_vals.insert(0, default_dropdown_str)
+            enum_attr_list.append([attr_name, enum_vals])
+        else:
+            if "text" not in attr_datatype:
+                alphanumeric_attr_list.append(attr_name)
+
+    foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
+    fk_set_list = []
+    for pair in foreign_key_names_and_tables:
+        # foreign_key_name = pair[0]
+        referenced_table = pair[1]
+        # get display name for table
+        referenced_table_record_names = get_display_names_for_all_records_in_table(referenced_table)
+        if len(referenced_table_record_names) > 0:
+            referenced_table_record_names.insert(0, default_dropdown_str)
+            fk_set_list.append([referenced_table, referenced_table_record_names])
+
+    return render_template('search_fields_template.html', alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, fk_set_list=fk_set_list)
 
 
 def connect(in_user=None):
@@ -256,12 +228,73 @@ def player_login(username):
 
 
 def username_invalid(username):
-    return re.search(r'[^a-zA-Z0-9_]', username) != None or len(username) > 32
+    return re.search(r'[^a-zA-Z0-9_]', username)
 
 
 # TODO: add password length max
 def password_invalid(password):
-    return re.search(r'[^a-zA-Z0-9_]', password) != None
+    return re.search(r'[^a-zA-Z0-9_]', password)
+
+
+# TODO: replace every other instance of execute to get fetchall() with this
+def execute_cmd_and_get_result(cursor_cmd):
+    result = None
+
+    db = connect()
+    cursor = db.cursor()
+
+    # Handle stored procedure call
+    if cursor_cmd.startswith("CALL "):
+        procedure_name_and_args = cursor_cmd[5:]
+        procedure_name, procedure_args_block = procedure_name_and_args.split("(")
+        unformatted_procedure_args = procedure_args_block[:-1].split(", ")
+        procedure_args = [member[1:-1] for member in unformatted_procedure_args]
+
+        cursor.callproc(procedure_name, procedure_args)
+        result = []
+        for stored_result in cursor.stored_results():
+            curr_result_lists = stored_result.fetchall()
+            for result_list in curr_result_lists:
+                result.append(result_list)
+    else:
+        cursor.execute(cursor_cmd)
+        result = cursor.fetchall()
+
+    cursor.close()
+    db.close()
+
+    return result
+
+
+# TODO: refactor code to use this as replacement
+def execute_cmd(cursor_cmd):
+    db = connect()
+    cursor = db.cursor()
+
+    cursor.execute(cursor_cmd)
+
+    cursor.close()
+    db.close()
+
+
+def get_display_name_select_statement_as_str(entity):
+    try:
+        result = execute_cmd_and_get_result("SELECT get_display_name_select_statement('{0}')".format(entity))
+        return result[0][0]
+    except:
+        return ""
+
+
+def get_display_names_for_all_records_in_table(entity):
+    try:
+        select_statement = get_display_name_select_statement_as_str(entity)
+        raw_display_names = execute_cmd_and_get_result(select_statement)
+        formatted_display_names = []
+        for name in raw_display_names:
+            formatted_display_names.append(name[0])
+        return formatted_display_names
+    except:
+        return []
 
 
 if __name__ == '__main__':
