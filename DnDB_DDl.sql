@@ -94,7 +94,6 @@ CREATE TABLE race(
 	race_id SMALLINT PRIMARY KEY AUTO_INCREMENT,
     race_is_playable BOOLEAN DEFAULT FALSE,
     race_name VARCHAR(128) DEFAULT NULL,
-    race_description TEXT DEFAULT NULL,
     race_speed SMALLINT DEFAULT NULL,
     race_size VARCHAR(24) DEFAULT NULL,
     dm_id INT(10) DEFAULT NULL
@@ -162,7 +161,7 @@ CREATE TABLE spell(
     spell_name VARCHAR(255) NOT NULL,
     spell_description TEXT DEFAULT NULL,
     spell_min_level TINYINT NOT NULL DEFAULT 0,
-    spell_range SMALLINT NOT NULL DEFAULT 1000,
+    spell_range varchar(128) NOT NULL,
     spell_casting_time VARCHAR(64) DEFAULT NULL,
     spell_duration VARCHAR(64) DEFAULT NULL,
     spell_is_concentration BOOLEAN NOT NULL DEFAULT FALSE,
