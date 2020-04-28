@@ -26,7 +26,7 @@ cursor = mydb.cursor()
 #     i = 0
 #     while i < len(data):
 #         try:
-#             print('INSERT INTO class (class_id,class_name,class_hit_die) VALUES (' + str(i) + ',\'' + str(data[i]['name']) + '\',\'' + str(data[i]['hit_die']) + '\')')
+#             print('INSERT INTO class (class_id,class_name,class_description,class_hit_die) VALUES (' + str(i) + ',\'' + str(data[i]['name']) + '\',NULL,\'d' + str(data[i]['hit_die']) + '\')')
 #         except: 
 #             print("Row not added due to formatting error")
 #         i+=1
@@ -54,7 +54,7 @@ cursor = mydb.cursor()
 #             desc = str(data[i]['desc'])[2:-2]
 #         except:
 #             desc = ""
-#         #print('INSERT INTO item (item_id,item_name,item_description,item_price,dm_id) VALUES (' + str(i) + ',\'' + str(data[i]['name']) + '\',\'' + desc + '\',\'' + str(data[i]["cost"]["quantity"]) + '\',NULL)')
+#         print('INSERT INTO item (item_id,item_name,item_description,item_price,dm_id) VALUES (' + str(i) + ',\'' + str(data[i]['name']) + '\',\'' + desc + '\',\'' + str(data[i]["cost"]["quantity"]) + '\',NULL)')
 #         if(str(data[i]['equipment_category']) == "Weapon"):
 #             try:
 #                 print('INSERT INTO weapon (weapon_id,weapon_num_dice_to_roll,weapon_damage_modifier,weapon_range,damage_type,item_id) VALUES ('+str(i)+',\''+str(data[i]['damage']['damage_dice'])+'\',0,\''+str(data[i]['range']['normal'])+'\',\''+str(data[i]['damage']['damage_type']['name'])+'\','+ str(i)+')')
@@ -69,7 +69,7 @@ cursor = mydb.cursor()
 #     i = 0
 #     while i < len(data):
 #         try:
-#             print('INSERT INTO language (language_id,language_name) VALUES (' + str(i) + ',\'' + str(data[i]['name']) +'\')')
+#             print('INSERT INTO language (language_id,language_name,language_description) VALUES (' + str(i) + ',\'' + str(data[i]['name']) +'\',NULL)')
 #         except: 
 #             print("Row not added due to formatting error")
 #         i+=1
@@ -93,7 +93,7 @@ cursor = mydb.cursor()
 #     i = 0
 #     while i < len(data):
 #         try:
-#             print('INSERT INTO monster (monster_id,monster_name,monster_challenge_rating,monster_base_hp,monster_type,dm_id ) VALUES (' + str(i) + ',\'' + str(data[i]['name']) +'\',' + str(data[i]['challenge_rating']) + ',' + str(data[i]['hit_points']) + ',' + str(data[i]['type']) + ',NULL)')
+#             print('INSERT INTO monster (monster_id,monster_name,monster_ac,monster_challenge_rating,monster_description,monster_base_hp,monster_type,dm_id) VALUES (' + str(i) + ',\'' + str(data[i]['name']) +'\','+ str(data[i]['armor_class']) + ','+ str(data[i]['challenge_rating']) + ',NULL,' + str(data[i]['hit_points']) + ',' + str(data[i]['type']) + ',NULL)')
 #         except: 
 #             print("Row not added due to formatting error")
 #         i+=1
@@ -105,7 +105,7 @@ cursor = mydb.cursor()
 #     i = 0
 #     while i < len(data):
 #         try:
-#             print('INSERT INTO race (race_id,race_is_playable,race_name,race_speed,race_size,dm_id ) VALUES (' + str(i) + ',True,\'' + str(data[i]['name']) + '\',' + str(data[i]['speed']) + ',\'' + str(data[i]['size']) + '\',NULL)')
+#             print('INSERT INTO race (race_id,race_is_playable,race_name,race_description,race_speed,race_size,dm_id ) VALUES (' + str(i) + ',True,\'' + str(data[i]['name']) + '\',NULL,' + str(data[i]['speed']) + ',\'' + str(data[i]['size']) + '\',NULL)')
 #         except: 
 #             print("Row not added due to formatting error")
 #         i+=1
@@ -172,7 +172,13 @@ cursor = mydb.cursor()
             
 #             if str(data[i]['school']['name']) == "Transmutation":
 #                 magic_id = 7
-#             print('INSERT INTO spell (spell_id,spell_name,spell_description,spell_min_level,spell_range,spell_casting_time,spell_duration,spell_is_concentration,magicschool_id,dm_id ) VALUES ('+str(i)+',\''+str(data[i]['name'])+'\','+json.dumps(str(data[i]['desc'])[2:-2]) + ',' + str(data[i]['level']) + ',\'' + str(data[i]['range']) + '\',\'' + str(data[i]['casting_time']) + '\',\'' + str(data[i]['duration']) + '\',' + str(data[i]['concentration']) + ',' + str(magic_id) + ',NULL)')
+
+#             material = ""
+#             try:
+#                 material = str(data[i]['material'])[1:-1]
+#             except:
+#                 material = ""
+#             print('INSERT INTO spell (spell_id,spell_name,spell_description,spell_min_level,spell_range,spell_casting_time,spell_duration,spell_is_concentration,spell_material,magicschool_id,dm_id ) VALUES ('+str(i)+',\''+str(data[i]['name'])+'\','+json.dumps(str(data[i]['desc'])[2:-2]) + ',' + str(data[i]['level']) + ',\'' + str(data[i]['range']) + '\',\'' + str(data[i]['casting_time']) + '\',\'' + str(data[i]['duration']) + '\',' + str(data[i]['concentration']) + ',\''+str(material) +'\',' + str(magic_id) + ',NULL)')
 #         except: 
 #             print("Row not added due to formatting error")
 #         i+=1
