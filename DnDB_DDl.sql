@@ -134,24 +134,16 @@ CREATE TABLE item(
 	item_id INT(10) PRIMARY KEY AUTO_INCREMENT, # changed [first table where NOTED change]
     item_name VARCHAR(128) DEFAULT NULL,
     item_description TEXT DEFAULT NULL,
-    item_rarity TINYINT NOT NULL DEFAULT 0,
     item_price VARCHAR(128) DEFAULT NULL,
-    item_requires_attunement BOOLEAN DEFAULT FALSE,
     dm_id INT(10) DEFAULT NULL
 )ENGINE=InnoDB;
 
 CREATE TABLE weapon(
 	weapon_id SMALLINT PRIMARY KEY AUTO_INCREMENT,
-    weapon_accuracy TINYINT NOT NULL DEFAULT 0,
-    weapon_num_dice_to_roll TINYINT NOT NULL DEFAULT 1,
+    weapon_num_dice_to_roll VARCHAR(4) NOT NULL,
     weapon_damage_modifier TINYINT NOT NULL DEFAULT 0,
-    weapon_size VARCHAR(32) DEFAULT NULL,
-    weapon_is_one_hand BOOLEAN NOT NULL DEFAULT TRUE,
-    weapon_is_off_hand BOOLEAN NOT NULL DEFAULT FALSE,
-    weapon_crit_chance TINYINT NOT NULL DEFAULT 20 CHECK(weapon_crit_chance <= 20),
-    weapon_crit_multiplier TINYINT NOT NULL DEFAULT 2,
     weapon_range SMALLINT DEFAULT NULL,
-    damage_type_id TINYINT NOT NULL,
+    damage_type VARCHAR(32) NOT NULL,
     item_id INT(10) UNIQUE NOT NULL
 )ENGINE=InnoDB;
 
