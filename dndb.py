@@ -44,22 +44,58 @@ cursor = mydb.cursor()
 #         i+=1
 # damage_file.close()
 
-#Item & Weapon
-with open ("src/5e-SRD-Equipment.json", 'r',encoding='utf-8') as dndFile:
+# #Item & Weapon
+# with open ("src/5e-SRD-Equipment.json", 'r',encoding='utf-8') as dndFile:
+#     data = json.load(dndFile)
+#     i = 0
+#     while i < len(data):
+#         desc = ""
+#         try:
+#             desc = str(data[i]['desc'])[2:-2]
+#         except:
+#             desc = ""
+#         #print('INSERT INTO item (item_id,item_name,item_description,item_price,dm_id) VALUES (' + str(i) + ',\'' + str(data[i]['name']) + '\',\'' + desc + '\',\'' + str(data[i]["cost"]["quantity"]) + '\',NULL)')
+#         if(str(data[i]['equipment_category']) == "Weapon"):
+#             try:
+#                 print('INSERT INTO weapon (weapon_id,weapon_num_dice_to_roll,weapon_damage_modifier,weapon_range,damage_type,item_id) VALUES ('+str(i)+',\''+str(data[i]['damage']['damage_dice'])+'\',0,\''+str(data[i]['range']['normal'])+'\',\''+str(data[i]['damage']['damage_type']['name'])+'\','+ str(i)+')')
+#             except: 
+#                 print("Row not added due to formatting error")
+#         i+=1
+# dndFile.close()
+
+# #Language
+# with open ("src/5e-SRD-Languages.json", 'r',encoding='utf-8') as dndFile:
+#     data = json.load(dndFile)
+#     i = 0
+#     while i < len(data):
+#         try:
+#             print('INSERT INTO language (language_id,language_name) VALUES (' + str(i) + ',\'' + str(data[i]['name']) +'\')')
+#         except: 
+#             print("Row not added due to formatting error")
+#         i+=1
+# dndFile.close()
+
+# #School of Magic
+# with open ("src/5e-SRD-Magic-Schools.json", 'r',encoding='utf-8') as dndFile:
+#     data = json.load(dndFile)
+#     i = 0
+#     while i < len(data):
+#         try:
+#             print('INSERT INTO schoolofmagic (magicschool_id,magicschool_name,magicschool_description ) VALUES (' + str(i) + ',\'' + str(data[i]['name']) +'\',\'' + str(data[i]['desc']) + '\')')
+#         except: 
+#             print("Row not added due to formatting error")
+#         i+=1
+# dndFile.close()
+
+#Monster
+with open ("src/5e-SRD-Monsters.json", 'r',encoding='utf-8') as dndFile:
     data = json.load(dndFile)
     i = 0
     while i < len(data):
-        desc = ""
         try:
-            desc = str(data[i]['desc'])[2:-2]
-        except:
-            desc = ""
-        #print('INSERT INTO item (item_id,item_name,item_description,item_price,dm_id) VALUES (' + str(i) + ',\'' + str(data[i]['name']) + '\',\'' + desc + '\',\'' + str(data[i]["cost"]["quantity"]) + '\',NULL)')
-        if(str(data[i]['equipment_category']) == "Weapon"):
-            try:
-                print('INSERT INTO weapon (weapon_id,weapon_num_dice_to_roll,weapon_damage_modifier,weapon_range,damage_type,item_id) VALUES ('+str(i)+',\''+str(data[i]['damage']['damage_dice'])+'\',0,\''+str(data[i]['range']['normal'])+'\',\''+str(data[i]['damage']['damage_type']['name'])+'\','+ str(i)+')')
-            except: 
-                print("Row not added due to formatting error")
+            print('INSERT INTO monster (monster_id,monster_name,monster_challenge_rating,monster_base_hp,monster_type,dm_id ) VALUES (' + str(i) + ',\'' + str(data[i]['name']) +'\',' + str(data[i]['challenge_rating']) + ',' + str(data[i]['hit_points']) + ',' + str(data[i]['type']) + ',NULL)')
+        except: 
+            print("Row not added due to formatting error")
         i+=1
 dndFile.close()
 

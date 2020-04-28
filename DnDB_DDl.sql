@@ -84,10 +84,9 @@ CREATE TABLE skill(
 CREATE TABLE monster(
 	monster_id INT(10) PRIMARY KEY AUTO_INCREMENT,
     monster_name VARCHAR(128) DEFAULT NULL,
-    monster_challenge_rating TINYINT DEFAULT NULL,
-    monster_description TEXT DEFAULT NULL,
+    monster_challenge_rating FLOAT DEFAULT NULL,
     monster_base_hp SMALLINT DEFAULT 0,
-    race_id SMALLINT,
+    monster_type varchar(128),
     dm_id INT(10)
 )ENGINE=InnoDB;
 
@@ -149,8 +148,7 @@ CREATE TABLE weapon(
 
 CREATE TABLE `language`(
 	language_id TINYINT PRIMARY KEY AUTO_INCREMENT,
-    language_name VARCHAR(64) NOT NULL,
-    language_description TEXT DEFAULT NULL
+    language_name VARCHAR(64) NOT NULL
 )ENGINE=InnoDB;
 
 CREATE TABLE schoolofmagic(
