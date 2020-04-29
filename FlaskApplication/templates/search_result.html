@@ -1,0 +1,56 @@
+<html>
+    <head>
+        <title> DnDB Homepage </title>
+        <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <header class="page">
+            <div class="nav-bar">
+                <h1>DnDB</h1>
+                <ul class="menu">
+                    <li><a href="{{ url_for('index') }}">Home</a></li>
+                    <li><a href="{{ url_for('my_campaigns') }}">My Campaigns</a></li>
+                    <li><a href="{{ url_for('my_creations') }}">My Creations</a></li>
+                    <li><a href="{{ url_for('create') }}">Create</a></li>
+                    <li><a href="{{ url_for('search') }}">Search</a></li>
+                </ul>
+            </div>
+        </header>
+        <h1 class="page_title">Search Result</h1>
+        <div class="campaign_previews">
+            {% if records_and_metadata == None %}
+            <p>No results found</p>
+            {% else %}
+                    <div class="preview-item"></div>
+                        <form method="POST" action="{{url_for('entity_details')}}">
+                            {% for record_and_metadata in records_and_metadata %}
+                                <button name="{{record_and_metadata[0]}}_btn" value="{{record_and_metadata[2][0]}}={{record_and_metadata[2][1]}}">
+                                    <h1>{{record_and_metadata[3][0]}} : {{record_and_metadata[3][1]}}</h1>
+                                    {% for col_and_val in record_and_metadata[4] %}
+                                    <p>{{col_and_val[0]}} : {{col_and_val[1]}}</p>
+                                    {% endfor %}
+                                </button>
+                            {% endfor %}
+                        </form>
+                    </div>
+            {% endif %}
+        </div>
+        <!-- <table>
+        {% if records_and_metadata == None %}
+        <p>No results found</p>
+        {% else %}
+            {% for record_and_metadata in records_and_metadata %}
+            
+                <p> SHOULD BE 'identifier, ___id': {{record_and_metadata[0]}}</p>
+                <p> SHOULD BE 'entity, ___": {{record_and_metadata[1]}}</p>
+                {% for col_and_val in record_and_metadata[2] %}
+                    <tr>
+                        <td>{{col_and_val[0]}}</td>
+                        <td>{{col_and_val[1]}}</td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
+        </table> -->
+    </body>
+</html>

@@ -84,10 +84,16 @@ CREATE TABLE skill(
 CREATE TABLE monster(
 	monster_id INT(10) PRIMARY KEY AUTO_INCREMENT,
     monster_name VARCHAR(128) DEFAULT NULL,
-    monster_challenge_rating TINYINT DEFAULT NULL,
+    monster_ac TINYINT NOT NULL DEFAULT 10,
+    monster_challenge_rating FLOAT DEFAULT NULL,
     monster_description TEXT DEFAULT NULL,
     monster_base_hp SMALLINT DEFAULT 0,
-    race_id SMALLINT,
+    monster_type ENUM(
+						"abberation", "beast", "celestial", "construct", "dragon",
+                        "elemental", "fey", "fiend",
+                        "fiend (shapechanger)", "giant", "humanoid", "monstrosity",
+                        "ooze", "plant", "swarm of tiny beasts", "undead", "other"
+					 ) NOT NULL DEFAULT "other",
     dm_id INT(10)
 )ENGINE=InnoDB;
 
@@ -109,6 +115,7 @@ CREATE TABLE `character`(
     char_age SMALLINT DEFAULT NULL,
     char_height VARCHAR(10) DEFAULT NULL,
     char_notes TEXT DEFAULT NULL,
+    char_public_class VARCHAR(128) NOT NULL DEFAULT "adventurer",
     char_base_hp SMALLINT DEFAULT NULL,
     char_hp_remaining SMALLINT DEFAULT NULL,
     char_skillpoints_remaining SMALLINT DEFAULT NULL,
@@ -134,7 +141,14 @@ CREATE TABLE item(
 	item_id INT(10) PRIMARY KEY AUTO_INCREMENT, # changed [first table where NOTED change]
     item_name VARCHAR(128) DEFAULT NULL,
     item_description TEXT DEFAULT NULL,
-    item_rarity TINYINT NOT NULL DEFAULT 0,
+    item_rarity ENUM(
+						"common", "uncommon", "rare", "very rare", "legendary"
+					)NOT NULL DEFAULT "common",
+    item_type ENUM(
+					"armor", "weapon", "potion", "ring", "rod", "scroll", "staff",
+					"wand", "wondrous item", "equipment", "shiled", "ammunition",
+                    "ordinary"
+				  ) NOT NULL DEFAULT "ordinary",
     item_price VARCHAR(128) DEFAULT NULL,
     item_requires_attunement BOOLEAN DEFAULT FALSE,
     dm_id INT(10) DEFAULT NULL
@@ -142,16 +156,10 @@ CREATE TABLE item(
 
 CREATE TABLE weapon(
 	weapon_id SMALLINT PRIMARY KEY AUTO_INCREMENT,
-    weapon_accuracy TINYINT NOT NULL DEFAULT 0,
     weapon_num_dice_to_roll TINYINT NOT NULL DEFAULT 1,
     weapon_damage_modifier TINYINT NOT NULL DEFAULT 0,
-    weapon_size VARCHAR(32) DEFAULT NULL,
-    weapon_is_one_hand BOOLEAN NOT NULL DEFAULT TRUE,
-    weapon_is_off_hand BOOLEAN NOT NULL DEFAULT FALSE,
-    weapon_crit_chance TINYINT NOT NULL DEFAULT 20 CHECK(weapon_crit_chance <= 20),
-    weapon_crit_multiplier TINYINT NOT NULL DEFAULT 2,
     weapon_range SMALLINT DEFAULT NULL,
-    damage_type_id TINYINT NOT NULL,
+    damage_type VARCHAR(32) NOT NULL,
     item_id INT(10) UNIQUE NOT NULL
 )ENGINE=InnoDB;
 
@@ -172,7 +180,7 @@ CREATE TABLE spell(
     spell_name VARCHAR(255) NOT NULL,
     spell_description TEXT DEFAULT NULL,
     spell_min_level TINYINT NOT NULL DEFAULT 0,
-    spell_range SMALLINT NOT NULL DEFAULT 1000,
+    spell_range VARCHAR(128) NOT NULL DEFAULT "no range",
     spell_casting_time VARCHAR(64) DEFAULT NULL,
     spell_duration VARCHAR(64) DEFAULT NULL,
     spell_is_concentration BOOLEAN NOT NULL DEFAULT FALSE,
@@ -180,7 +188,7 @@ CREATE TABLE spell(
     dm_id INT(10) DEFAULT NULL
 )ENGINE=InnoDB;
 
-CREATE TABLE skillpoint( # TODO: check this, if want to move foreign key setting to later block
+CREATE TABLE skillpoint(
 	skill_id TINYINT,
     char_id INT(10),
     skillpoint_amount SMALLINT NOT NULL DEFAULT 1 CHECK(skillpoint_amount >= 0),
@@ -282,13 +290,23 @@ CREATE TABLE class(
 	class_id SMALLINT PRIMARY KEY AUTO_INCREMENT,
     class_name VARCHAR(24) NOT NULL,
     class_description TEXT DEFAULT NULL,
-    class_hit_die ENUM("d4", "d6", "d8", "d10", "d12") NOT NULL DEFAULT "d4"
+    class_hit_die ENUM("d4", "d6", "d8", "d10", "d12") NOT NULL DEFAULT "d4",
+    class_role ENUM("tank", "support", "glass cannon") NOT NULL DEFAULT "support"
 )ENGINE=InnoDB;
 
 CREATE TABLE classlevelnewspellscount(
 	class_id SMALLINT,
     newspellscount_class_level TINYINT NOT NULL DEFAULT 1 CHECK(newspellscount_class_level >= 1),
-    newspellscount_num_spells TINYINT NOT NULL DEFAULT 0 CHECK(newspellscount_num_spells >= 0),
+    newspellscount_cantrips TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_1 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_2 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_3 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_4 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_5 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_6 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_7 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_8 TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spell_slots_level_9 TINYINT NOT NULL DEFAULT 0,
     PRIMARY KEY(class_id, newspellscount_class_level)
 )ENGINE=InnoDB;
 
@@ -312,7 +330,6 @@ ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_dm_id` FOREIGN KEY(dm_id) REFER
 ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
 ALTER TABLE skill ADD CONSTRAINT `skill_fk_ability_id` FOREIGN KEY(ability_id) REFERENCES ability(ability_id);
 ALTER TABLE monster ADD CONSTRAINT `monster_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
-ALTER TABLE monster ADD CONSTRAINT `monster_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
 ALTER TABLE race ADD CONSTRAINT `race_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
@@ -320,7 +337,6 @@ ALTER TABLE `character` ADD CONSTRAINT `character_fk_player_id` FOREIGN KEY(play
 ALTER TABLE spellslot ADD CONSTRAINT `spellslot_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);
 ALTER TABLE item ADD CONSTRAINT `item_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE weapon ADD CONSTRAINT `weapon_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
-ALTER TABLE weapon ADD CONSTRAINT `weapon_fk_damage_type_id` FOREIGN KEY(damage_type_id) REFERENCES damagetype(damage_type_id);
 ALTER TABLE spell ADD CONSTRAINT `spell_fk_magicschool_id` FOREIGN KEY(magicschool_id) REFERENCES schoolofmagic(magicschool_id);
 ALTER TABLE spell ADD CONSTRAINT `spell_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE skillpoint ADD CONSTRAINT `skillpoint_fk_skill_id` FOREIGN KEY(skill_id) REFERENCES skill(skill_id);

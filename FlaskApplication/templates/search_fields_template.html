@@ -3,7 +3,8 @@
         <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
     </head>
     <body>
-        <form action="" method="POST" autocomplete="off">
+        <form action="{{ url_for('search_result') }}" target="_PARENT" method="POST" autocomplete="off">
+            <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
             {% for alphanumeric_attr in alphanumeric_attr_list %}
             <p>
                 {{alphanumeric_attr}} : <input type="text" name={{alphanumeric_attr}} placeholder=""/>
@@ -14,7 +15,7 @@
                 <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
                 <select id={{enum_attr[0]}} name={{enum_attr[0]}}>
                     {% for enum_val in enum_attr[1] %}
-                        <option value="chosen_{{enum_attr[0]}}">{{enum_val}}</option>
+                        <option value="{{enum_val}}">{{enum_val}}</option>
                     {% endfor %}
                 </select>
             </p>
@@ -22,9 +23,13 @@
             {% for fk_set in fk_set_list %}
             <p>
                 <label for={{fk_set[0]}}>{{fk_set[0]}} : </label>
-                <select id={{fk_set[0]}} name={{fk_set[0]}}>
-                    {% for fk_value in fk_set[1] %}
-                    <option value={{fk_value}}>{{fk_value}}</option>
+                <select id={{fk_set[1]}} name={{fk_set[1]}}>
+                    {% for fk_value_and_metadata in fk_set[2] %}
+                    <p>0: {{fk_value_and_metadata[0]}}</p>
+                    <p>1: {{fk_value_and_metadata[1]}}</p>
+                    <p>2: {{fk_value_and_metadata[2]}}</p>
+                    <p>3: {{fk_value_and_metadata[3]}}</p>
+                    <option value={{fk_value_and_metadata[2]}}>{{fk_value_and_metadata[0]}}</option>
                     {% endfor %}
                 </select>
             </p>

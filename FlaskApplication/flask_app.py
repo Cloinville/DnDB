@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 # from flask_mysqldb import MySQL
 import mysql.connector
 import yaml
@@ -141,6 +141,11 @@ def campaign_details():
 #TODO: stub
 @app.route('/my_creations')
 def my_creations():
+    # If player is_dm:
+    #   a. get campaign previews for campaigns w/dm_id
+    #   b. get monster_party
+    #   c. get 
+    #
     return render_template('my_creations.html')
 
 
@@ -164,14 +169,23 @@ def search():
     return render_template('search.html', entities=searchable_entities, chosen_entity=searchable_entities[0], search_fields_link=None)
 
 
-@app.route('/search_fields_template/<name>', methods=['GET', 'POST'])
+# removed 'POST' option in test 4/27 , methods=['GET', 'POST']
+@app.route('/search_fields_template/<name>')
 def search_fields_template(name):
     chosen_entity = name
    # TODO: Finish POST request handling
-    if request.method == "POST":
-        # Showing how can access the key and value of every field
-        for item in request.form:
-            print("Key: '{0}', Value:'{1}'".format(item, request.form[item]))
+    # if request.method == "POST":
+    #     # Showing how can access the key and value of every field
+    #     search_fields = []
+    #     for item in request.form:
+    #         key = item
+    #         value = request.form[item]
+    #         if value != "":
+    #             search_fields.append([key, value])
+        
+    #     session['search_fields'] = search_fields
+    #     return redirect(url_for('search_result'))
+        
         # TODO 4/26: add final REDIRECT function, to reroute the results of the 
         #            SELECT statement created using these key-values into search results page
         # ie. return redirect(url_for('search_results', query=query))       
@@ -194,16 +208,97 @@ def search_fields_template(name):
 
     foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
     fk_set_list = []
+    # For each foreign table that the base table references
     for pair in foreign_key_names_and_tables:
-        # foreign_key_name = pair[0]
+        # Get the name of the table
         referenced_table = pair[1]
-        # get display name for table
-        referenced_table_record_names = get_display_names_for_all_records_in_table(referenced_table)
-        if len(referenced_table_record_names) > 0:
-            referenced_table_record_names.insert(0, default_dropdown_str)
-            fk_set_list.append([referenced_table, referenced_table_record_names])
+        # Get the display and identification information for all records in that table
+        referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
+        
+        # If there were records in the table
+        if len(referenced_table_record_names_and_metadata) > 0:
+            # Save the name of the fk column for use in searching later
+            foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
 
-    return render_template('search_fields_template.html', alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, fk_set_list=fk_set_list)
+            # Insert a dummy entry, to have a "no selection" option for dropdowns
+            referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
+            
+            # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
+            fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+
+    return render_template('search_fields_template.html', chosen_entity=chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, fk_set_list=fk_set_list)
+
+
+@app.route('/search_result', methods=['POST', 'GET'])
+def search_result():
+    records = []
+    chosen_entity = ""
+
+    if request.method == 'POST':
+        search_fields = []
+        for item in request.form:
+            key = item
+            value = request.form[item]
+            print("KEY VALUE: '{0}', '{1}'".format(key,value))
+            if key == "chosen_entity":
+                chosen_entity = value.lower()
+            elif value != "":
+                search_fields.append("{0} = '{1}'".format(key,value))
+
+        condition = ""
+        if len(search_fields) > 0:
+            condition = "WHERE {0}".format(" AND ".join(search_fields))
+        #
+        # # DB side TODO: create displays for all searchable entities => FROM statement here
+        # search_statement = "SELECT * FROM {0}".format(chosen_entity)
+        # if len(search_fields) > 0:
+        #     search_statement = "{0} WHERE {1}".format(search_statement, " AND ".join(search_fields))
+        #
+        # print("SEARCH STATEMENT: '{0}'".format(search_statement))
+        # TODO: amend for DB side display view as to what columns get
+        # results = execute_cmd_and_get_result(search_statement)
+        print("Entity, Search: '{0}', '{1}'".format(chosen_entity, condition))
+        results = execute_cmd_and_get_result("CALL get_previews('{0}', '{1}')".format(chosen_entity, condition))
+        # columns = execute_cmd_and_get_result("CALL get_all_column_names('{0}')".format(chosen_entity))
+
+        records_and_metadata = get_formatted_previews_and_metadata_list(results)
+        # records = []
+        # num_cols = len(columns)
+
+        # for result in results:
+        #     curr_col_and_val = []
+        #     end_index = min(len(result), num_cols)
+        #     for i in range(0, end_index):
+        #         curr_col_and_val.append([columns[i][0], result[i]])
+        #     records.append(curr_col_and_val)
+
+        # print("COLS AND VALS: ")
+        # for col_and_val in records:
+        #     print("1: {0}".format(col_and_val))
+
+        # if len(records) == 0:
+        #     records = None
+
+    # search_fields = session.pop('search_fields', [])
+    # return render_template('search_result', search_fields=search_fields)
+    return render_template('search_result.html', records_and_metadata=records_and_metadata)
+
+
+#TODO: stub
+@app.route('/entity_details', methods=['GET', 'POST'])
+def entity_details():
+    if request.method == 'POST':
+        post_key = ""
+        post_value = ""
+        for key in request.form:
+            if "_btn" in key:
+                post_key = key
+                post_value = request.form[key]
+                print("YUP: {0}, {1}".format(key, request.form[key]))
+            else:
+                print("nope: {0}, {1}".format(key, request.form[key]))
+
+    return render_template('entity_details.html')
 
 
 def connect(in_user=None):
@@ -277,24 +372,89 @@ def execute_cmd(cursor_cmd):
     db.close()
 
 
-def get_display_name_select_statement_as_str(entity):
+def get_display_name(entity):
     try:
-        result = execute_cmd_and_get_result("SELECT get_display_name_select_statement('{0}')".format(entity))
+        result = execute_cmd_and_get_result("SELECT get_display_column_name('{0}')".format(entity))
         return result[0][0]
     except:
         return ""
 
 
-def get_display_names_for_all_records_in_table(entity):
+def get_display_and_column_names_select_statement_as_str(entity):
     try:
-        select_statement = get_display_name_select_statement_as_str(entity)
-        raw_display_names = execute_cmd_and_get_result(select_statement)
-        formatted_display_names = []
-        for name in raw_display_names:
-            formatted_display_names.append(name[0])
-        return formatted_display_names
+        result = execute_cmd_and_get_result("SELECT get_display_and_col_names_select_statement('{0}')".format(entity))
+        return result[0][0]
+    except:
+        return ""
+
+
+def get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(entity):
+    try:
+        results = execute_cmd_and_get_result("CALL get_displayname_displaycolname_fkvalue_fkcolname('{0}')".format(entity))
+        return results
     except:
         return []
+
+# def get_unique_display_names_and_cols_for_all_records_in_table(entity):
+    # try:
+    #     select_statement = get_display_and_column_names_select_statement_as_str(entity)
+    #     raw_display_names = execute_cmd_and_get_result(select_statement)
+    #     formatted_display_names = []
+    #     for name in raw_display_names:
+    #         formatted_name = name[0]
+    #         formatted_col = name[1]
+    #         if formatted_name not in formatted_display_names:
+    #             formatted_display_names.append([formatted_name, formatted_col])
+    #     return formatted_display_names
+    # except:
+    #     return []
+
+
+def get_formatted_previews_and_metadata_list(unformatted_records):
+    # unformatted_records, even if no search results, will ALWAYS have
+    # at least one entry
+    print("UNFORMATTED: '{0}'".format(unformatted_records))
+    if len(unformatted_records) == 1:
+        return None
+
+    formatted_records = []
+    column_names_list = unformatted_records.pop(0)
+    print("Cols: {0}".format(column_names_list))
+
+    num_cols = len(column_names_list)
+    for record in unformatted_records:
+        curr_record_column_value_pairs = []
+        curr_record_generic_identifier_pair = []
+        curr_record_identifier_pair = []
+        curr_record_headliner_col_val_pair = []
+        curr_record_table_name = ""
+
+        end_index = min(len(record), num_cols)
+        for i in range(0, min(1, end_index)):
+            curr_record_identifier_metadata_pair = [column_names_list[i], record[i]]
+            print("identifier_pair: {0}".format(curr_record_identifier_metadata_pair))
+
+        for i in range(1, min(2, end_index)):
+            curr_record_table_name = record[i]
+            print("table_name: {0}".format(curr_record_table_name))
+
+        for i in range(2, min(3, end_index)):
+            curr_record_identifier_pair = [column_names_list[i], record[i]]
+            print("col_val_pair: {0}".format(curr_record_identifier_pair))
+
+        for i in range(3, min(4, end_index)):
+            curr_record_headliner_col_val_pair = [column_names_list[i], record[i]]
+            print("headliner pair: {0}".format(curr_record_headliner_col_val_pair))
+
+        for i in range(4, end_index):
+            curr_record_column_value_pairs.append([column_names_list[i], record[i]])
+        
+        formatted_records.append([curr_record_table_name, curr_record_identifier_metadata_pair, curr_record_identifier_pair, curr_record_headliner_col_val_pair, curr_record_column_value_pairs])
+    
+    if len(formatted_records) == 0:
+        formatted_records = None
+
+    return formatted_records
 
 
 if __name__ == '__main__':
