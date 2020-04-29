@@ -184,6 +184,190 @@ cursor = mydb.cursor()
 #         i+=1
 # dndFile.close()
 
+# #Class Level New Spells Count
+# with open ("src/5e-SRD-Levels.json", 'r',encoding='utf-8') as dndFile:
+#     data = json.load(dndFile)
+#     i = 0
+#     while i < len(data):
+#         try:
+#             print('INSERT INTO classlevelnewspellscount (class_id,newspellscount_class_level,newspellscount_cantrips,newspellscount_spells,newspellscount_spell_slots_level_1,newspellscount_spell_slots_level_2 ,newspellscount_spell_slots_level_3 ,newspellscount_spell_slots_level_4 ,newspellscount_spell_slots_level_5 ,newspellscount_spell_slots_level_6 ,newspellscount_spell_slots_level_7 ,newspellscount_spell_slots_level_8 ,newspellscount_spell_slots_level_9) VALUES (' + str(int(i/20)) + ',' + str(data[i]['level'])+',\'' + str(data[i]['spellcasting']['cantrips_known']) + '\','+ str(data[i]['spellcasting']['spells_known']) +',' + str(data[i]['spellcasting']['spell_slots_level_1']) + ',' + str(data[i]['spellcasting']['spell_slots_level_2']) + ','+ str(data[i]['spellcasting']['spell_slots_level_3']) + ','+ str(data[i]['spellcasting']['spell_slots_level_4']) + ',' + str(data[i]['spellcasting']['spell_slots_level_5']) + ','+ str(data[i]['spellcasting']['spell_slots_level_6']) + ','+str(data[i]['spellcasting']['spell_slots_level_7']) + ','+str(data[i]['spellcasting']['spell_slots_level_8']) + ','+str(data[i]['spellcasting']['spell_slots_level_9']) + ')')
+#         except: 
+#             print("HOPEFULLY YOU ARE READING THIS BECAUSE THE CODE WORKS PERFECTLY AND THIS IS A FAIL FOR NOT EXISTING WITH THE DATA :)")
+#         i+=1
+# dndFile.close()
+
+# #Race Languages
+# with open ("src/5e-SRD-Races.json", 'r',encoding='utf-8') as dndFile:
+#     data = json.load(dndFile)
+#     i = 0
+#     while i < len(data):
+#         j = 0
+#         while j < len(data[i]['languages']):
+#             lang_id = -1
+#             if str(data[i]['languages'][j]['name']) == "Common":
+#                 lang_id = 0
+            
+#             if str(data[i]['languages'][j]['name']) == "Dwarvish":
+#                 lang_id = 1
+            
+#             if str(data[i]['languages'][j]['name']) == "Elvish":
+#                 lang_id = 2
+            
+#             if str(data[i]['languages'][j]['name']) == "Giant":
+#                 lang_id = 3
+            
+#             if str(data[i]['languages'][j]['name']) == "Gnomish":
+#                 lang_id = 4
+            
+#             if str(data[i]['languages'][j]['name']) == "Goblin":
+#                 lang_id = 5
+            
+#             if str(data[i]['languages'][j]['name']) == "Halfling":
+#                 lang_id = 6
+            
+#             if str(data[i]['languages'][j]['name']) == "Orc" or str(data[i]['languages'][j]['name']) == "Orcish":
+#                 lang_id = 7
+
+#             if str(data[i]['languages'][j]['name']) == "Abyssal":
+#                 lang_id = 8
+            
+#             if str(data[i]['languages'][j]['name']) == "Celestial":
+#                 lang_id = 9
+            
+#             if str(data[i]['languages'][j]['name']) == "Draconic":
+#                 lang_id = 10
+            
+#             if str(data[i]['languages'][j]['name']) == "Deep Speech":
+#                 lang_id = 11
+            
+#             if str(data[i]['languages'][j]['name']) == "Infernal":
+#                 lang_id = 12
+            
+#             if str(data[i]['languages'][j]['name']) == "Primordial":
+#                 lang_id = 13
+            
+#             if str(data[i]['languages'][j]['name']) == "Sylvan":
+#                 lang_id = 14
+            
+#             if str(data[i]['languages'][j]['name']) == "Undercommon":
+#                 lang_id = 15
+#             try:
+#                 print('INSERT INTO raceknownlanguage (race_id,language_id) VALUES ('+str(i)+','+str(lang_id) +')')
+#             except: 
+#                 print("Row not added due to formatting error")
+#             j+=1
+#         j = 0
+#         try:
+#             while j < len(data[i]['language_options']['from']):
+#                 lang_id = -1
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Common":
+#                     lang_id = 0
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Dwarvish":
+#                     lang_id = 1
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Elvish":
+#                     lang_id = 2
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Giant":
+#                     lang_id = 3
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Gnomish":
+#                     lang_id = 4
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Goblin":
+#                     lang_id = 5
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Halfling":
+#                     lang_id = 6
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Orc":
+#                     lang_id = 7
+
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Abyssal":
+#                     lang_id = 8
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Celestial":
+#                     lang_id = 9
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Draconic":
+#                     lang_id = 10
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Deep Speech":
+#                     lang_id = 11
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Infernal":
+#                     lang_id = 12
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Primordial":
+#                     lang_id = 13
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Sylvan":
+#                     lang_id = 14
+                
+#                 if str(data[i]['language_options']['from'][j]['name']) == "Undercommon":
+#                     lang_id = 15
+#                 try:
+#                     print('INSERT INTO raceknownlanguage (race_id,language_id) VALUES ('+str(i)+','+str(lang_id) +')')
+#                 except: 
+#                     print("Row not added due to formatting error")
+#                 j+=1
+#         except:
+#             print("No language option")    
+#         i+=1
+# dndFile.close()
+
+# #Class Learnable Spell
+# with open ("src/5e-SRD-Spells.json", 'r',encoding='utf-8') as dndFile:
+#     data = json.load(dndFile)
+#     i = 0
+#     while i < len(data):
+#         j = 0
+#         while j < len(data[i]['classes']):
+#             class_id = -1
+#             if str(data[i]['classes'][j]['name']) == "Barbarian":
+#                 class_id = 0
+            
+#             if str(data[i]['classes'][j]['name']) == "Bard":
+#                 class_id = 1
+            
+#             if str(data[i]['classes'][j]['name']) == "Cleric":
+#                 class_id = 2
+            
+#             if str(data[i]['classes'][j]['name']) == "Druid":
+#                 class_id = 3
+            
+#             if str(data[i]['classes'][j]['name']) == "Fighter":
+#                 class_id = 4
+            
+#             if str(data[i]['classes'][j]['name']) == "Monk":
+#                 class_id = 5
+
+#             if str(data[i]['classes'][j]['name']) == "Paladin":
+#                 class_id = 6
+            
+#             if str(data[i]['classes'][j]['name']) == "Ranger":
+#                 class_id = 7
+            
+#             if str(data[i]['classes'][j]['name']) == "Rogue":
+#                 class_id = 8
+            
+#             if str(data[i]['classes'][j]['name']) == "Sorcerer":
+#                 class_id = 9
+            
+#             if str(data[i]['classes'][j]['name']) == "Warlock":
+#                 class_id = 10
+            
+#             if str(data[i]['classes'][j]['name']) == "Wizard":
+#                 class_id = 11
+            
+#             try:
+#                 print('INSERT INTO classlearnablespell (spell_id,class_id,cls_required_class_level) VALUES (' + str(i) + ',' + str(class_id) +','+ str(data[i]['level']) +')')
+#             except: 
+#                 print("Row not added due to formatting error")
+#             j+=1
+#         i+=1
+# dndFile.close()
 
 # mydb.commit()
 cursor.close()

@@ -260,6 +260,7 @@ CREATE TABLE classlevelnewspellscount(
 	class_id SMALLINT,
     newspellscount_class_level TINYINT NOT NULL DEFAULT 1 CHECK(newspellscount_class_level >= 1),
     newspellscount_cantrips TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spells TINYINT NOT NULL DEFAULT 0,
     newspellscount_spell_slots_level_1 TINYINT NOT NULL DEFAULT 0,
     newspellscount_spell_slots_level_2 TINYINT NOT NULL DEFAULT 0,
     newspellscount_spell_slots_level_3 TINYINT NOT NULL DEFAULT 0,
