@@ -9,8 +9,9 @@ app = Flask(__name__)
 
 # configure db
 connection_values = yaml.load(open('db.yaml'))
-logged_in_user = None
-logged_in_user_nickname = ""
+logged_in_user_details = {'username': None, 'nickname': None, 'player_id': None, 'dm_id': None}
+# logged_in_user = None
+# logged_in_user_nickname = ""
 default_dropdown_str = ""
 searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item']
 creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
@@ -19,7 +20,7 @@ creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spe
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if logged_in_user != None:
+    if logged_in_user_details['username'] != None:
         return redirect('/index')
 
     error = None
@@ -50,7 +51,8 @@ def login():
 @app.route('/signup', methods=['POST', 'GET'])
 def signup():
     error = None
-    if logged_in_user != None:
+    # if logged_in_user != None:
+    if logged_in_user_details['username'] != None:
         return redirect('/index')
 
     if request.method == 'POST':
@@ -100,16 +102,25 @@ def signup():
 
 @app.route('/index')
 def index():
-    if logged_in_user == None:
+    # if logged_in_user == None:
+    if logged_in_user_details['username'] == None:
         return redirect('/login')
-    return render_template('index.html', nickname=logged_in_user_nickname)
+    return render_template('index.html',  logged_in_user_details=logged_in_user_details)
+
 
 @app.route('/logout')
 def logout():
-    global logged_in_user
-    global logged_in_user_nickname
-    logged_in_user = None
-    logged_in_user_nickname = None
+    # global logged_in_user
+    # global logged_in_user_nickname
+
+    global logged_in_user_details
+    logged_in_user_details['username'] = None
+    logged_in_user_details['nickname'] = None
+    logged_in_user_details['dm_id'] = None
+    logged_in_user_details['player_id'] = None
+
+    # logged_in_user = None
+    # logged_in_user_nickname = None
 
     return redirect('/login')
 
@@ -117,7 +128,8 @@ def logout():
 #TODO: stub
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
-    if logged_in_user == None:
+    # if logged_in_user == None:
+    if logged_in_user_details['username'] == None:
         return redirect('/login')
 
     error = None
@@ -132,15 +144,31 @@ def profile():
             else:
                 update_player_nickname(nickname)
 
-    username = logged_in_user
-    nickname = logged_in_user_nickname
+    # username = logged_in_user
+    # nickname = logged_in_user_nickname
+    # username = logged_in_user_details['username']
+    # nickname = logged_in_user_details['nickname']
 
-    return render_template('profile.html', error=error, username=username, nickname=nickname)
+    return render_template('profile.html', error=error, logged_in_user_details=logged_in_user_details)
+
+
+@app.route('/premium', methods=['GET', 'POST'])
+def premium():
+    # if logged_in_user == None:
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
+    if request.method == "POST":
+        upgrade_player_to_dm()
+        return redirect('/create')
+
+    return render_template('premium.html', logged_in_user_details=logged_in_user_details)
 
 
 @app.route('/my_campaigns', methods=['POST', 'GET'])
 def my_campaigns():
-    if logged_in_user == None:
+    # if logged_in_user == None:
+    if logged_in_user_details['username'] == None:
         return redirect('/login')
 
     # If campaign preview picked, send campaign_details the id of the selected campaign
@@ -150,14 +178,17 @@ def my_campaigns():
         return redirect(url_for('campaign_details', campaign_id=campaign_id))
 
     # Otherwise, render page with campaign previews
-    campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}')".format(logged_in_user))
+    campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}')".format(logged_in_user_details['username']))
 
-    return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details, nickname=logged_in_user_nickname)
+    return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details, logged_in_user_details=logged_in_user_details)
 
 
 # TODO: 4/25: actually implement
 @app.route('/campaign_details')
 def campaign_details():
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
     #TODO: add redirect for if have no campaign args?
     try:
         str_campaign_id=request.args.get('campaign_id')
@@ -173,12 +204,15 @@ def campaign_details():
     #TODO: replace this, just a stub for now
     campaign_details = [campaign_id]
 
-    return render_template('campaign_details.html', campaign_details=campaign_details, nickname=logged_in_user_nickname)
+    return render_template('campaign_details.html', campaign_details=campaign_details, logged_in_user_details=logged_in_user_details)
 
 
 #TODO: stub
 @app.route('/my_creations', methods=['GET', 'POST'])
 def my_creations():
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
     previews = []
     entities_to_show = []
     filterable_entities = [""]
@@ -198,7 +232,7 @@ def my_creations():
         entities_to_show.extend(creatable_entities)
 
     for entity in entities_to_show:
-        results = execute_cmd_and_get_result("CALL get_previews_for_entity_created_by_player('{0}', '{1}')".format(logged_in_user, entity))
+        results = execute_cmd_and_get_result("CALL get_previews_for_entity_created_by_player('{0}', '{1}')".format(logged_in_user_details['username'], entity))
         records_and_metadata = get_formatted_previews_and_metadata_list(results)
         if records_and_metadata != None:
             previews.append(records_and_metadata)
@@ -208,27 +242,31 @@ def my_creations():
     # DEBUGGING
     print(previews)
     # END DEBUGGING
-    return render_template('my_creations.html', filter_entity=filter_entity, filterable_entities=filterable_entities, entities_to_show=entities_to_show, previews=previews, nickname=logged_in_user_nickname)
+    return render_template('my_creations.html', filter_entity=filter_entity, filterable_entities=filterable_entities, entities_to_show=entities_to_show, previews=previews, logged_in_user_details=logged_in_user_details)
 
 
 #TODO: stub
 @app.route('/create')
 def create():
-    return render_template('create.html')
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
+    return render_template('create.html', logged_in_user_details=logged_in_user_details)
 
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
-    if logged_in_user == None:
-        return redirect('/index')
+    # if logged_in_user == None:
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
 
     if request.method == 'POST':
         chosen_entity = request.form['chosen_entity']
         search_fields_url = "search_fields_template/{0}".format(chosen_entity.lower())
         print(chosen_entity)
 
-        return render_template('search.html', entities=searchable_entities, chosen_entity=chosen_entity, search_fields_link=search_fields_url, nickname=logged_in_user_nickname)
-    return render_template('search.html', entities=searchable_entities, chosen_entity=searchable_entities[0], search_fields_link=None, nickname=logged_in_user_nickname)
+        return render_template('search.html', entities=searchable_entities, chosen_entity=chosen_entity, search_fields_link=search_fields_url, logged_in_user_details=logged_in_user_details)
+    return render_template('search.html', entities=searchable_entities, chosen_entity=searchable_entities[0], search_fields_link=None, logged_in_user_details=logged_in_user_details)
 
 
 # removed 'POST' option in test 4/27 , methods=['GET', 'POST']
@@ -343,12 +381,15 @@ def search_result():
 
     # search_fields = session.pop('search_fields', [])
     # return render_template('search_result', search_fields=search_fields)
-    return render_template('search_result.html', records_and_metadata=records_and_metadata, nickname=logged_in_user_nickname)
+    return render_template('search_result.html', records_and_metadata=records_and_metadata, logged_in_user_details=logged_in_user_details)
 
 
 #TODO: stub
 @app.route('/entity_details', methods=['GET', 'POST'])
 def entity_details():
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
     if request.method == 'POST':
         post_key = ""
         post_value = ""
@@ -360,7 +401,7 @@ def entity_details():
             else:
                 print("nope: {0}, {1}".format(key, request.form[key]))
 
-    return render_template('entity_details.html', nickname=logged_in_user_nickname)
+    return render_template('entity_details.html', logged_in_user_details=logged_in_user_details)
 
 
 def connect(in_user=None):
@@ -377,25 +418,37 @@ def connect(in_user=None):
 
 
 def player_login(username):
-    # TODO - implement this!
-    # needs to log the user into the webpage/set as current user, somehow
-    global logged_in_user 
-    logged_in_user = username
+    # TODO: replace with procedure in MySQL that returns all 4 items in 1 call
+    global logged_in_user_details
+    logged_in_user_details['username'] = username
 
-    global logged_in_user_nickname
-    logged_in_user_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_username = '{0}'".format(logged_in_user))[0][0]
+    # global logged_in_user_nickname
+    # logged_in_user_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_username = '{0}'".format(logged_in_user))[0][0]
+    logged_in_user_details['nickname'] = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_username = '{0}'".format(logged_in_user_details['username']))[0][0]
+
+    dm_id_result = execute_cmd_and_get_result("SELECT dm_id FROM dungeonmaster JOIN player USING(player_id) WHERE player_username = '{0}'".format(logged_in_user_details['username']))
+    if len(dm_id_result) > 0:
+        logged_in_user_details['dm_id'] = dm_id_result[0][0]
+    else:
+        logged_in_user_details['dm_id'] = None
+
+    logged_in_user_details['player_id'] = execute_cmd_and_get_result("SELECT player_id FROM player WHERE player_username = '{0}'".format(logged_in_user_details['username']))[0][0]
+    # global logged_in_user_details
+    # logged_in_user_details = {}
 
     return
 
 
 def update_player_nickname(nickname):
-    player_id = execute_cmd_and_get_result("SELECT get_player_id_from_username('{0}')".format(logged_in_user))[0][0]
+    global logged_in_user_details
+    player_id = logged_in_user_details['player_id']
+
     successful_update = execute_field_update("player", "player_nickname", nickname, "WHERE player_id = {0}".format(player_id))
     if successful_update:
-        global logged_in_user_nickname
+
         updated_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_id = {0}".format(player_id))[0][0]
         print("UPDATED NICKNAME: {0}".format(updated_nickname))
-        logged_in_user_nickname = updated_nickname
+        logged_in_user_details['nickname'] = updated_nickname
 
 
 def username_invalid(username):
@@ -405,6 +458,21 @@ def username_invalid(username):
 # TODO: add password length max
 def password_invalid(password):
     return re.search(r'[^a-zA-Z0-9_]', password)
+
+
+# def get_player_id():
+#     # player_id = execute_cmd_and_get_result("SELECT get_player_id_from_username('{0}')".format(logged_in_user))[0][0]
+#     return player_id
+
+
+# def get_dm_id():
+#     dm_id = execute_cmd_and_get_result("CALL get_dm_id_for_player('{0}')".format(logged_in_user))
+
+
+def upgrade_player_to_dm():
+    global logged_in_user_details
+    if logged_in_user_details['dm_id'] == None:
+        execute_cmd("INSERT INTO dungeonmaster(player_id) VALUES({0})".format(logged_in_user_details['player_id']))
 
 
 # TODO: replace every other instance of execute to get fetchall() with this

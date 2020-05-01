@@ -5,6 +5,9 @@
     </head>
     <body>
         <header class="page">
+            <div class="nav-bar-title">
+                <h1>DnDB</h1>
+            </div>
             <div class="nav-bar">
                 <div class="menu-end-item"></div>
                 <ul class="menu">
@@ -16,9 +19,12 @@
                 </ul>
                 <div class="menu-end-item">
                     <div class="dropdown">
-                        <a href="{{url_for('profile')}}">Hello, {{nickname}}</a>
+                        <a href="{{url_for('profile')}}">Hello, {{logged_in_user_details['nickname']}}</a>
                         <div class="dropdown-content">
                             <a href="{{url_for('profile')}}">My Profile</a>
+                            {% if logged_in_user_details['dm_id'] == None %}
+                            <a href="{{url_for('premium')}}">Upgrade to Premium</a>
+                            {% endif %}
                             <a href="{{url_for('logout')}}">Logout</a>
                         </div>
                     </div>
@@ -36,7 +42,7 @@
                         <label for="username">Username: </label>
                     </td>
                     <td>
-                        <input type="text" id="username" name="username" value="{{username}}" readonly>
+                        <input type="text" id="username" name="username" value="{{logged_in_user_details['username']}}" readonly>
                     </td>
                 </tr>
                 <tr>
@@ -44,7 +50,7 @@
                         <label for="nickname">Nickname: </label>
                     </td>
                     <td>
-                        <input type="text" id="nickname" name="nickname" placeholder="{{nickname}}">
+                        <input type="text" id="nickname" name="nickname" placeholder="{{logged_in_user_details['nickname']}}">
                     </td>
                 </tr>
                 <tr>
