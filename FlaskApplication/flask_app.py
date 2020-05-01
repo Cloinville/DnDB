@@ -106,6 +106,8 @@ def index():
 
 @app.route('/logout')
 def logout():
+    global logged_in_user
+    global logged_in_user_nickname
     logged_in_user = None
     logged_in_user_nickname = None
 
@@ -150,7 +152,7 @@ def my_campaigns():
     # Otherwise, render page with campaign previews
     campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}')".format(logged_in_user))
 
-    return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details)
+    return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details, nickname=logged_in_user_nickname)
 
 
 # TODO: 4/25: actually implement
@@ -171,7 +173,7 @@ def campaign_details():
     #TODO: replace this, just a stub for now
     campaign_details = [campaign_id]
 
-    return render_template('campaign_details.html', campaign_details=campaign_details)
+    return render_template('campaign_details.html', campaign_details=campaign_details, nickname=logged_in_user_nickname)
 
 
 #TODO: stub
@@ -206,7 +208,7 @@ def my_creations():
     # DEBUGGING
     print(previews)
     # END DEBUGGING
-    return render_template('my_creations.html', filter_entity=filter_entity, filterable_entities=filterable_entities, entities_to_show=entities_to_show, previews=previews)
+    return render_template('my_creations.html', filter_entity=filter_entity, filterable_entities=filterable_entities, entities_to_show=entities_to_show, previews=previews, nickname=logged_in_user_nickname)
 
 
 #TODO: stub
@@ -225,8 +227,8 @@ def search():
         search_fields_url = "search_fields_template/{0}".format(chosen_entity.lower())
         print(chosen_entity)
 
-        return render_template('search.html', entities=searchable_entities, chosen_entity=chosen_entity, search_fields_link=search_fields_url)
-    return render_template('search.html', entities=searchable_entities, chosen_entity=searchable_entities[0], search_fields_link=None)
+        return render_template('search.html', entities=searchable_entities, chosen_entity=chosen_entity, search_fields_link=search_fields_url, nickname=logged_in_user_nickname)
+    return render_template('search.html', entities=searchable_entities, chosen_entity=searchable_entities[0], search_fields_link=None, nickname=logged_in_user_nickname)
 
 
 # removed 'POST' option in test 4/27 , methods=['GET', 'POST']
@@ -341,7 +343,7 @@ def search_result():
 
     # search_fields = session.pop('search_fields', [])
     # return render_template('search_result', search_fields=search_fields)
-    return render_template('search_result.html', records_and_metadata=records_and_metadata)
+    return render_template('search_result.html', records_and_metadata=records_and_metadata, nickname=logged_in_user_nickname)
 
 
 #TODO: stub
@@ -358,7 +360,7 @@ def entity_details():
             else:
                 print("nope: {0}, {1}".format(key, request.form[key]))
 
-    return render_template('entity_details.html')
+    return render_template('entity_details.html', nickname=logged_in_user_nickname)
 
 
 def connect(in_user=None):
