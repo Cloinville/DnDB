@@ -1,0 +1,61 @@
+<html>
+    <head>
+        <title> DnDB Homepage </title>
+        <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <header class="page">
+            <div class="nav-bar">
+                <div class="menu-end-item"></div>
+                <ul class="menu">
+                    <li><a href="{{ url_for('index') }}">Home</a></li>
+                    <li><a href="{{ url_for('my_campaigns') }}">My Campaigns</a></li>
+                    <li><a href="{{ url_for('my_creations') }}">My Creations</a></li>
+                    <li><a href="{{ url_for('create') }}">Create</a></li>
+                    <li><a href="{{ url_for('search') }}">Search</a></li>
+                </ul>
+                <div class="menu-end-item">
+                    <div class="dropdown">
+                        <a href="{{url_for('profile')}}">Hello, {{nickname}}</a>
+                        <div class="dropdown-content">
+                            <a href="{{url_for('profile')}}">My Profile</a>
+                            <a href="{{url_for('logout')}}">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <h1 class="page_title">My Profile</h1>
+        <!--{% if error %}-->
+                <div class="hidden"> <p class="error" style="color:#df2020; font-size:12px;margin-bottom:10px;"><strong>Error: </strong> {{error}}</p></div>
+        <!--{% endif %}-->
+        <form method="POST" action="" autocomplete="off">
+            <table>
+                <tr>
+                    <td>
+                        <label for="username">Username: </label>
+                    </td>
+                    <td>
+                        <input type="text" id="username" name="username" value="{{username}}" readonly>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="nickname">Nickname: </label>
+                    </td>
+                    <td>
+                        <input type="text" id="nickname" name="nickname" placeholder="{{nickname}}">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="submit" name="submit_btn" value="Update">
+                    </td>
+                    <td>
+                        <input type="submit" name="submit_btn" value="Revert">
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </body>
+</html>

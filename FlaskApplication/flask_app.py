@@ -10,8 +10,10 @@ app = Flask(__name__)
 # configure db
 connection_values = yaml.load(open('db.yaml'))
 logged_in_user = None
+logged_in_user_nickname = ""
 default_dropdown_str = ""
 searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item']
+creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
 
 # add try-except for db
 
@@ -72,6 +74,9 @@ def signup():
             if len(result) > 0:
                 error = "Username already exists. Please try again."
 
+            elif username_invalid(nickname):
+                error = "Nickname can only contain alphanumerics and underscores. Please try again."
+
             elif len(password) == 0:
                 error = "Password required"
 
@@ -97,7 +102,38 @@ def signup():
 def index():
     if logged_in_user == None:
         return redirect('/login')
-    return render_template('index.html')
+    return render_template('index.html', nickname=logged_in_user_nickname)
+
+@app.route('/logout')
+def logout():
+    logged_in_user = None
+    logged_in_user_nickname = None
+
+    return redirect('/login')
+
+
+#TODO: stub
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    if logged_in_user == None:
+        return redirect('/login')
+
+    error = None
+
+    if request.method == 'POST':
+        profile_details = request.form
+
+        if profile_details["submit_btn"] == "Update":
+            nickname = profile_details["nickname"]
+            if username_invalid(nickname):
+                error = "Nickname can only contain alphanumerics and underscores."
+            else:
+                update_player_nickname(nickname)
+
+    username = logged_in_user
+    nickname = logged_in_user_nickname
+
+    return render_template('profile.html', error=error, username=username, nickname=nickname)
 
 
 @app.route('/my_campaigns', methods=['POST', 'GET'])
@@ -139,14 +175,38 @@ def campaign_details():
 
 
 #TODO: stub
-@app.route('/my_creations')
+@app.route('/my_creations', methods=['GET', 'POST'])
 def my_creations():
-    # If player is_dm:
-    #   a. get campaign previews for campaigns w/dm_id
-    #   b. get monster_party
-    #   c. get 
-    #
-    return render_template('my_creations.html')
+    previews = []
+    entities_to_show = []
+    filterable_entities = [""]
+    filter_entity = ""
+
+    filterable_entities.extend(creatable_entities)
+
+    if request.method == 'POST':
+        for key in request.form:
+            print("{0} : {1}".format(key, request.form[key]))
+        filter_entity = request.form['filter_entity']
+        if filter_entity == "":
+            entities_to_show.extend(creatable_entities)
+        else:
+            entities_to_show.append(filter_entity)
+    else:
+        entities_to_show.extend(creatable_entities)
+
+    for entity in entities_to_show:
+        results = execute_cmd_and_get_result("CALL get_previews_for_entity_created_by_player('{0}', '{1}')".format(logged_in_user, entity))
+        records_and_metadata = get_formatted_previews_and_metadata_list(results)
+        if records_and_metadata != None:
+            previews.append(records_and_metadata)
+
+    entities_to_show.insert(0, "")
+
+    # DEBUGGING
+    print(previews)
+    # END DEBUGGING
+    return render_template('my_creations.html', filter_entity=filter_entity, filterable_entities=filterable_entities, entities_to_show=entities_to_show, previews=previews)
 
 
 #TODO: stub
@@ -319,7 +379,21 @@ def player_login(username):
     # needs to log the user into the webpage/set as current user, somehow
     global logged_in_user 
     logged_in_user = username
+
+    global logged_in_user_nickname
+    logged_in_user_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_username = '{0}'".format(logged_in_user))[0][0]
+
     return
+
+
+def update_player_nickname(nickname):
+    player_id = execute_cmd_and_get_result("SELECT get_player_id_from_username('{0}')".format(logged_in_user))[0][0]
+    successful_update = execute_field_update("player", "player_nickname", nickname, "WHERE player_id = {0}".format(player_id))
+    if successful_update:
+        global logged_in_user_nickname
+        updated_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_id = {0}".format(player_id))[0][0]
+        print("UPDATED NICKNAME: {0}".format(updated_nickname))
+        logged_in_user_nickname = updated_nickname
 
 
 def username_invalid(username):
@@ -344,6 +418,10 @@ def execute_cmd_and_get_result(cursor_cmd):
         procedure_name, procedure_args_block = procedure_name_and_args.split("(")
         unformatted_procedure_args = procedure_args_block[:-1].split(", ")
         procedure_args = [member[1:-1] for member in unformatted_procedure_args]
+        
+        # DEBUGGING
+        print("procedure_name: {0} - procedure_args: {1}".format(procedure_name, procedure_args))
+        # END DEBUGGING
 
         cursor.callproc(procedure_name, procedure_args)
         result = []
@@ -355,6 +433,7 @@ def execute_cmd_and_get_result(cursor_cmd):
         cursor.execute(cursor_cmd)
         result = cursor.fetchall()
 
+    db.commit()
     cursor.close()
     db.close()
 
@@ -366,10 +445,35 @@ def execute_cmd(cursor_cmd):
     db = connect()
     cursor = db.cursor()
 
-    cursor.execute(cursor_cmd)
+    # Handle stored procedure call
+    if cursor_cmd.startswith("CALL "):
+        procedure_name_and_args = cursor_cmd[5:]
+        procedure_name, procedure_args_block = procedure_name_and_args.split("(")
+        unformatted_procedure_args = procedure_args_block[:-1].split(", ")
+        procedure_args = [member[1:-1] for member in unformatted_procedure_args]
+        
+        # DEBUGGING
+        print("procedure_name: {0} - procedure_args: {1}".format(procedure_name, procedure_args))
+        # END DEBUGGING
 
+        cursor.callproc(procedure_name, procedure_args)
+    else:
+        cursor.execute(cursor_cmd)
+
+    db.commit()
     cursor.close()
     db.close()
+
+
+def execute_field_update(entity, field, new_value, condition):
+    try:
+        print("FIELD UPDATE: CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
+        execute_cmd("CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
+        return True
+
+    except Exception as e:
+         print("Error in field update: {0}".format(e))
+         return False
 
 
 def get_display_name(entity):
@@ -414,7 +518,7 @@ def get_formatted_previews_and_metadata_list(unformatted_records):
     # unformatted_records, even if no search results, will ALWAYS have
     # at least one entry
     print("UNFORMATTED: '{0}'".format(unformatted_records))
-    if len(unformatted_records) == 1:
+    if len(unformatted_records) <= 1:
         return None
 
     formatted_records = []
@@ -426,7 +530,7 @@ def get_formatted_previews_and_metadata_list(unformatted_records):
         curr_record_column_value_pairs = []
         curr_record_generic_identifier_pair = []
         curr_record_identifier_pair = []
-        curr_record_headliner_col_val_pair = []
+        # curr_record_headliner_col_val_pair = []
         curr_record_table_name = ""
 
         end_index = min(len(record), num_cols)
@@ -442,14 +546,17 @@ def get_formatted_previews_and_metadata_list(unformatted_records):
             curr_record_identifier_pair = [column_names_list[i], record[i]]
             print("col_val_pair: {0}".format(curr_record_identifier_pair))
 
-        for i in range(3, min(4, end_index)):
-            curr_record_headliner_col_val_pair = [column_names_list[i], record[i]]
-            print("headliner pair: {0}".format(curr_record_headliner_col_val_pair))
+        # for i in range(3, min(4, end_index)):
+        #     curr_record_headliner_col_val_pair = [column_names_list[i], record[i]]
+        #     print("headliner pair: {0}".format(curr_record_headliner_col_val_pair))
 
-        for i in range(4, end_index):
+        # for i in range(4, end_index):
+        #     curr_record_column_value_pairs.append([column_names_list[i], record[i]])
+
+        for i in range(3, end_index):
             curr_record_column_value_pairs.append([column_names_list[i], record[i]])
         
-        formatted_records.append([curr_record_table_name, curr_record_identifier_metadata_pair, curr_record_identifier_pair, curr_record_headliner_col_val_pair, curr_record_column_value_pairs])
+        formatted_records.append([curr_record_table_name, curr_record_identifier_metadata_pair, curr_record_identifier_pair, curr_record_column_value_pairs])
     
     if len(formatted_records) == 0:
         formatted_records = None

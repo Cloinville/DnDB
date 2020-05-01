@@ -17,6 +17,7 @@ FROM player JOIN `character` USING(player_id)
             JOIN campaign USING(party_id)
             JOIN dungeonmaster USING(dm_id);
 
+# TODO: remove this, once have implemented Flask-side replacement w/get_previews()
 DROP PROCEDURE IF EXISTS get_campaign_previews;
 DELIMITER $$
 CREATE PROCEDURE get_campaign_previews(IN in_username VARCHAR(32))
@@ -253,92 +254,114 @@ CREATE FUNCTION player_is_dm(in_username VARCHAR(255))
 RETURNS BOOLEAN
 DETERMINISTIC
 BEGIN
-	RETURN in_username IN (SELECT player_username FROM dungeonmaster JOIN player USING(player_id) WHERE player_username = in_username);
+	RETURN get_dm_id_for_player(in_username) IS NOT NULL;
+# TODO
+	# RETURN in_username IN (SELECT player_username FROM dungeonmaster JOIN player USING(player_id) WHERE player_username = in_username);
 END $$
 DELIMITER ;
 
-DROP VIEW IF EXISTS campaign_previews;
-CREATE VIEW campaign_previews
-AS
-SELECT "campaign_id" as "identifier",
-	   campaign_id as "campaign_id", 
-	   campaign_name as "Campaign Name", 
-       party_name as "Adventuring Party", 
-       player_username as "DM"
-FROM campaign JOIN adventuringparty USING(party_id) 
-			  JOIN dungeonmaster USING(dm_id) 
-              JOIN player USING(player_id);
-              
-DROP VIEW IF EXISTS character_previews;
-CREATE VIEW character_previews
-AS
-SELECT "char_id" as "identifier",
-	   char_id as "char_id", 
-	   char_name as "Name", 
-       race_name as "Race",
-       char_public_class as "Class",
-       player_username as "Played By"
-FROM `character` JOIN player USING(player_id) 
-			     JOIN race USING(race_id);
-                 
-DROP VIEW IF EXISTS monster_previews;
-CREATE VIEW monster_previews
-AS
-SELECT "monster_id" as "identifier",
-	   monster_id as "monster_id", 
-	   monster_name as "Name", 
-       monster_type as "Type",
-       monster_challenge_rating as "Challenge Rating",
-       monster_base_hp as "Base HP"
-FROM monster;
+DROP FUNCTION IF EXISTS get_dm_id_for_player;
+DELIMITER $$
+CREATE FUNCTION get_dm_id_for_player(in_username VARCHAR(255))
+RETURNS INT(10)
+DETERMINISTIC
+BEGIN
+	RETURN (SELECT dm_id FROM dungeonmaster JOIN player USING(player_id) WHERE player_username = in_username LIMIT 1);
+END $$
+DELIMITER ;
 
-DROP VIEW IF EXISTS spell_previews;
-CREATE VIEW spell_previews
-AS
-SELECT 'spell_id' as 'identifier',
-	   spell_id as 'spell_id', 
-	   spell_name as 'Name', 
-       magicschool_name as 'School of Magic',
-       spell_min_level as 'Spell Level'
-FROM spell JOIN schoolofmagic USING(magicschool_id);
+DROP FUNCTION IF EXISTS get_player_id_from_username;
+DELIMITER $$
+CREATE FUNCTION get_player_id_from_username(in_username VARCHAR(255))
+RETURNS INT(10)
+DETERMINISTIC
+BEGIN
+	RETURN (SELECT player_id FROM player WHERE player_username = in_username LIMIT 1);
+END $$
+DELIMITER ;
 
-DROP VIEW IF EXISTS item_previews;
-CREATE VIEW item_previews
-AS
-SELECT 'item.item_id' as 'identifier',
-	   item.item_id as 'item.item_id', 
-	   item_name as 'Name', 
-       item_rarity as 'Rarity',
-       item_type as 'Type'
-FROM item LEFT JOIN weapon USING(item_id)
-UNION
-SELECT 'item_id' as 'identifier',
-	   item_id as 'item_id', 
-	   item_name as 'Name', 
-       item_rarity as 'Rarity',
-       item_type as 'Type'
-FROM weapon LEFT JOIN item USING(item_id);
+-- DROP VIEW IF EXISTS campaign_previews;
+-- CREATE VIEW campaign_previews
+-- AS
+-- SELECT "campaign_id" as "identifier",
+-- 	   campaign_id as "campaign_id", 
+-- 	   campaign_name as "Campaign Name", 
+--        party_name as "Adventuring Party", 
+--        player_username as "DM"
+-- FROM campaign JOIN adventuringparty USING(party_id) 
+-- 			  JOIN dungeonmaster USING(dm_id) 
+--               JOIN player USING(player_id);
+--               
+-- DROP VIEW IF EXISTS character_previews;
+-- CREATE VIEW character_previews
+-- AS
+-- SELECT "char_id" as "identifier",
+-- 	   char_id as "char_id", 
+-- 	   char_name as "Name", 
+--        race_name as "Race",
+--        char_public_class as "Class",
+--        player_username as "Played By"
+-- FROM `character` JOIN player USING(player_id) 
+-- 			     JOIN race USING(race_id);
+--                  
+-- DROP VIEW IF EXISTS monster_previews;
+-- CREATE VIEW monster_previews
+-- AS
+-- SELECT "monster_id" as "identifier",
+-- 	   monster_id as "monster_id", 
+-- 	   monster_name as "Name", 
+--        monster_type as "Type",
+--        monster_challenge_rating as "Challenge Rating",
+--        monster_base_hp as "Base HP"
+-- FROM monster;
 
-DROP VIEW IF EXISTS class_previews;
-CREATE VIEW class_previews
-AS
-SELECT 'class_id' as 'identifier',
-	   class_id as 'class_id', 
-	   class_name as 'Name', 
-       class_role as 'Role'
-FROM class;
+-- DROP VIEW IF EXISTS spell_previews;
+-- CREATE VIEW spell_previews
+-- AS
+-- SELECT 'spell_id' as 'identifier',
+-- 	   spell_id as 'spell_id', 
+-- 	   spell_name as 'Name', 
+--        magicschool_name as 'School of Magic',
+--        spell_min_level as 'Spell Level'
+-- FROM spell JOIN schoolofmagic USING(magicschool_id);
 
-DROP VIEW IF EXISTS race_previews;
-CREATE VIEW race_previews
-AS
-SELECT 'race_id' as 'identifier',
-	   race_id as 'race_id', 
-	   race_name as 'Name',
-       race_size as 'Size',
-       race_speed as 'Speed'
-FROM race;
+-- DROP VIEW IF EXISTS item_previews;
+-- CREATE VIEW item_previews
+-- AS
+-- SELECT 'item.item_id' as 'identifier',
+-- 	   item.item_id as 'item.item_id', 
+-- 	   item_name as 'Name', 
+--        item_rarity as 'Rarity',
+--        item_type as 'Type'
+-- FROM item LEFT JOIN weapon USING(item_id)
+-- UNION
+-- SELECT 'item_id' as 'identifier',
+-- 	   item_id as 'item_id', 
+-- 	   item_name as 'Name', 
+--        item_rarity as 'Rarity',
+--        item_type as 'Type'
+-- FROM weapon LEFT JOIN item USING(item_id);
 
-# WE USE THIS
+-- DROP VIEW IF EXISTS class_previews;
+-- CREATE VIEW class_previews
+-- AS
+-- SELECT 'class_id' as 'identifier',
+-- 	   class_id as 'class_id', 
+-- 	   class_name as 'Name', 
+--        class_role as 'Role'
+-- FROM class;
+
+-- DROP VIEW IF EXISTS race_previews;
+-- CREATE VIEW race_previews
+-- AS
+-- SELECT 'race_id' as 'identifier',
+-- 	   race_id as 'race_id', 
+-- 	   race_name as 'Name',
+--        race_size as 'Size',
+--        race_speed as 'Speed'
+-- FROM race;
+
+# This is still used - get_previews uses this to get which columns to return
 DROP FUNCTION IF EXISTS get_select_for_entity_previews;
 DELIMITER $$
 CREATE FUNCTION get_select_for_entity_previews(entity VARCHAR(255))
@@ -371,7 +394,10 @@ BEGIN
 	ELSEIF entity = "race"
     THEN
 		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'race_id' as 'race_id', 'Name' as 'Name', 'Size' as 'Size', 'Speed' as 'Speed' UNION SELECT 'race_id' as 'identifier', 'race' as 'entity', race_id as 'race_id', race_name as 'Name', race_size as 'Size', race_speed as 'Speed' FROM race";
-    ELSE
+    ELSEIF entity = "monsterparty"
+    THEN
+		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'monsterparty_id' as 'monsterparty_id', 'Location' as 'Location', 'Hoard Size' as 'Hoard Size', 'Average Challenge Rating' as 'Average Challenge Rating' from monsterparty JOIN monsterencounter USING(monsterparty_id) JOIN monster USING(monster_id) UNION SELECT 'monsterparty_id' as 'identifier', 'monsterparty' as 'entity', monsterparty_id, monsterparty_location as 'Location', hoard_size as 'Hoard Size', avg_cr as 'Average Challenge Rating' FROM ( SELECT monsterparty_id as 'monsterparty_id', monsterparty_location, count(*) as hoard_size, avg(monster_challenge_rating) as avg_cr, monsterparty.dm_id as dm_id from monsterparty JOIN monsterencounter USING(monsterparty_id) JOIN monster USING(monster_id) GROUP BY monsterparty_id ) as monsterparty_values";
+	ELSE
 		SET select_stmt = CONCAT("SELECT * FROM ", entity);
 	END IF;
     
@@ -491,79 +517,73 @@ BEGIN
 END $$
 DELIMITER ;
 
--- DROP PROCEDURE IF EXISTS get_previews_col_names;
--- DELIMITER $$
--- CREATE PROCEDURE get_previews_col_names(entity VARCHAR(255))
--- BEGIN
--- 	DECLARE select_stmt VARCHAR(255) DEFAULT "";
--- 	IF entity = "character"
---     THEN
--- 		SET select_stmt = "SELECT 'char_id' as 'identifier', 'char_id' as 'char_id', 'char_name' as 'Name', 'race_name' as 'Race', 'char_public_class' as 'Class', 'player_username' as 'Played By'";
--- 	ELSEIF entity = "monster"
---     THEN
--- 		SET select_stmt = "SELECT 'monster_id' as 'identifier', monster_id as 'monster_id', monster_name as 'Name', monster_type as 'Type', monster_challenge_rating as 'Challenge Rating', monster_base_hp as 'Base HP' FROM monster";
--- 	ELSEIF entity = "campaign"
---     THEN
--- 		SET select_stmt = "SELECT 'campaign_id' as 'identifier', campaign_id as 'campaign_id', player_nickname as 'DM', campaign_name as 'Campaign Name', party_name as 'Adventuring Party' FROM campaign JOIN dungeonmaster USING(dm_id) JOIN player USING(player_id) JOIN adventuringparty USING(party_id)";
---     ELSEIF entity = "spell"
---     THEN
--- 		SET select_stmt = "SELECT 'spell_id' as 'identifier', spell_id as 'spell_id', spell_name as 'Name', magicschool_name as 'School of Magic', spell_min_level as 'Spell Level' FROM spell LEFT JOIN schoolofmagic USING(magicschool_id)";
--- 	ELSEIF entity = "item"
---     THEN
--- 		SET select_stmt = "SELECT 'item.item_id' as 'identifier', item.item_id as 'item.item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM item LEFT JOIN weapon USING(item_id) UNION SELECT 'item.item_id' as 'identifier', item.item_id as 'item.item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM weapon LEFT JOIN item USING(item_id)";
--- 	ELSEIF  entity = "weapon"
---     THEN
--- 		SET select_stmt = "SELECT 'item_id' as 'identifier', item_id as 'item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM weapon LEFT JOIN item USING(item_id)";
---     ELSEIF entity = "class"
---     THEN
--- 		SET select_stmt = "SELECT 'class_id' as 'identifier', class_id as 'class_id', class_name as 'Name', class_role as 'Role' FROM class";
--- 	ELSEIF entity = "race"
---     THEN
--- 		SET select_stmt = "SELECT 'race_id' as 'identifier', race_id as 'race_id', race_name as 'Name', race_size as 'Size', race_speed as 'Speed' FROM race";
---     ELSE
--- 		SET select_stmt = CONCAT("SELECT * FROM ", entity);
--- 	END IF;
--- END
--- DELIMITER ;
+# TODO: Probably just drop this
+DROP PROCEDURE IF EXISTS get_created_records_for_entity;
+DELIMITER $$
+CREATE PROCEDURE get_created_records_for_entity(in_player_username VARCHAR(255), entity VARCHAR(255))
+BEGIN
+    DECLARE in_dm_id INT(10);
+    DECLARE entity_id_name VARCHAR(255);
+    
+    IF entity = 'character'
+    THEN
+		#TODO: try to find out if can find way to return all associated as well
+		SELECT * FROM `character` WHERE player_id = ( SELECT player_id FROM player WHERE player_username = in_player_username);
+	ELSE
+		SELECT get_dm_id_for_player(in_player_username) INTO in_dm_id;
+        IF in_dm_id IS NOT NULL
+        THEN
+			SET @query = CONCAT("SELECT * FROM ", entity, " WHERE dm_id = ", in_dm_id);
+		ELSE
+			SET entity_id_name = get_primary_key_name_from_table_name(entity);
+			SET @query = CONCAT("SELECT * FROM ", entity, " WHERE ", entity_id_name, " = 1 AND ", entity_id_name, " != 1");
+		END IF;
+        PREPARE stmt FROM @query;
+        EXECUTE stmt;
+	END IF;
+END $$
+DELIMITER ;
 
--- CREATE VIEW creations
--- AS
--- SELECT * FROM player JOIN `character` USING(player_id)
--- 					 JOIN 
+DROP PROCEDURE IF EXISTS get_previews_for_entity_created_by_player;
+DELIMITER $$
+CREATE PROCEDURE get_previews_for_entity_created_by_player(in_username VARCHAR(255), in_entity VARCHAR(255))
+BEGIN
+	DECLARE in_dm_id INT(10);
+    DECLARE entity_id_name VARCHAR(255);
+    DECLARE search_condition TEXT DEFAULT "";
+    
+    IF in_entity = 'character'
+    THEN
+		#TODO: try to find out if can find way to return all associated as well
+		# SELECT * FROM `character` WHERE player_id = ( SELECT player_id FROM player WHERE player_username = in_player_username);
+        CALL get_previews("character", CONCAT("WHERE player_id = ( SELECT player_id FROM player WHERE player_username = '", in_username, "')"));
+	ELSE
+		SELECT get_dm_id_for_player(in_username) INTO in_dm_id;
+        IF in_dm_id IS NOT NULL
+        THEN
+			SET search_condition = CONCAT("WHERE dm_id = ", in_dm_id);
+		ELSE
+			SET entity_id_name = get_primary_key_name_from_table_name(in_entity);
+			SET search_condition = CONCAT("WHERE ", entity_id_name, " = 1 AND ", entity_id_name, " != 1");
+		END IF;
+        CALL get_previews(in_entity, search_condition);
+	END IF;
+END $$
+DELIMITER ;
 
-# TODO: INSERT ON monster: IF NEW.monster_name IS NULL THEN SET NEW.monster_name = race_name of linked race
--- DROP VIEW IF EXISTS full_race_details;
--- CREATE VIEW full_race_details
--- AS
--- SELECT *
--- FROM race JOIN raceabilityscoremodifier USING(race_id)
--- 		  JOIN ability USING(ability_id)
---           JOIN raceknownlanguage USING(race_id)
---           JOIN `language` USING(language_id)
---           JOIN resistance USING(race_id)
---           JOIN vulnerability USING(race_id)
---           JOIN damagetype USING(damage_type_id);
-          
-
--- DROP VIEW IF EXISTS full_character_details;
--- CREATE VIEW full_character_details
--- AS
--- SELECT *
--- FROM `character` JOIN characterabilityscore USING(char_id)
--- 				 JOIN ability USING(ability_id)
---                  JOIN race USING(race_id)
---                  JOIN 
-
--- # TODO: finish, using views that combine associated entity info
--- DROP VIEW IF EXISTS player_creations;
--- CREATE VIEW player_creations 
--- AS
--- SELECT *
--- FROM player JOIN `character` USING(player_id)
--- 			JOIN dungeonmaster USING(dm_id)
---             JOIN campaign USING(dm_id)
---             JOIN monster USING(dm_id)
---             JOIN monsterencounter USING(dm_id)
---             JOIN monsterparty USING(dm_id)
---             JOIN spell USING(dm_id)
---             JOIN race USING(dm_id);
+DROP PROCEDURE IF EXISTS update_field_in_table;
+DELIMITER $$
+CREATE PROCEDURE update_field_in_table(in_table VARCHAR(255), in_field VARCHAR(255), new_value VARCHAR(255), in_condition TEXT)
+BEGIN
+	DECLARE formatted_in_table VARCHAR(255) DEFAULT "";
+    IF in_table = "character"
+    THEN
+		SET formatted_in_table = "`character`";
+	ELSE
+		SET formatted_in_table = in_table;
+	END IF;
+	SET @query = CONCAT("UPDATE ", formatted_in_table, " SET ", in_field, " = ", "'", new_value, "' ", in_condition);
+	PREPARE stmt FROM @query;
+	EXECUTE stmt;
+END $$
+DELIMITER ;

@@ -6,7 +6,7 @@
     <body>
         <header class="page">
             <div class="nav-bar">
-                <h1>DnDB</h1>
+                <div class="menu-end-item"></div>
                 <ul class="menu">
                     <li><a href="{{ url_for('index') }}">Home</a></li>
                     <li><a href="{{ url_for('my_campaigns') }}">My Campaigns</a></li>
@@ -14,8 +14,51 @@
                     <li><a href="{{ url_for('create') }}">Create</a></li>
                     <li><a href="{{ url_for('search') }}">Search</a></li>
                 </ul>
+                <div class="menu-end-item">
+                    <div class="dropdown">
+                        <a href="{{url_for('profile')}}">Hello, {{nickname}}</a>
+                        <div class="dropdown-content">
+                            <a href="{{url_for('profile')}}">My Profile</a>
+                            <a href="{{url_for('logout')}}">Logout</a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </header>
         <h1 class="page_title">My Creations</h1>
+        <div class="campaign_previews">
+            <form action="" method="POST">
+                <label for="Filter">Filter by Entity Type: </label>
+                <select id="filter_entity" name="filter_entity">
+                    {% for entity in filterable_entities %}
+                        {% if entity == filter_entity %}
+                            <option name="filter_entity" value="{{entity}}" selected>{{entity}}</option>
+                        {% else %}
+                            <option name="filter_entity" value="{{entity}}">{{entity}}</option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <input type=submit value="Filter Results">
+            </form>
+            {% if previews == None %}
+            <p>No creations found</p>
+            {% else %}
+
+                    <form method="POST" action="{{url_for('entity_details')}}">
+                            {% for preview in previews %}
+                                {% for record in preview %}
+                                    <div class="preview-item">
+                                        <button name="{{record[0]}}_btn" value="{{record[2][0]}}={{record[2][1]}}">
+                                            <h1>{{record[0]}}</h1>
+                                            {% for col_and_val in record[3] %}
+                                                <p>{{col_and_val[0]}} : {{col_and_val[1]}}</p>
+                                            {% endfor %}
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            {% endfor %}
+                    </form>
+                </div>
+            {% endif %}
     </body>
 </html>

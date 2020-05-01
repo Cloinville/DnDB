@@ -85,7 +85,7 @@ CREATE TABLE monster(
 	monster_id INT(10) PRIMARY KEY AUTO_INCREMENT,
     monster_name VARCHAR(128) DEFAULT NULL,
     monster_ac TINYINT NOT NULL DEFAULT 10,
-    monster_challenge_rating FLOAT DEFAULT NULL,
+    monster_challenge_rating FLOAT NOT NULL DEFAULT 0,
     monster_description TEXT DEFAULT NULL,
     monster_base_hp SMALLINT DEFAULT 0,
     monster_type ENUM(
