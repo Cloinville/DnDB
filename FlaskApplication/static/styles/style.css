@@ -246,6 +246,17 @@ header.page{
     font-size: 12px;
 }
 
+.create-grid-container{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-gap: 20px;
+    width: 800px;
+    margin: auto;
+    height:300px;
+    line-height: 50px;
+    margin-top: 25px; 
+}
+
 .grid-container{
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -257,7 +268,7 @@ header.page{
     margin-top: 25px;
 }
 
-.grid-container a, button{
+.grid-container a, button, .create-grid-container a, button{
     display:block;
     text-decoration: none;
     color:white;
@@ -271,12 +282,13 @@ header.page{
     border-radius: 10px;
 }
 
-.grid-container button:hover{
+.grid-container button:hover, .create-grid-container button:hover{
     cursor: pointer;
     background-color: white;
     color: black;
     transition: .2s;
 }
+
 .campaign_previews{
     height: 400px;
     width: 600px;

@@ -31,43 +31,6 @@
                     </div>
                 </div>
         </header>
-        <h1 class="page_title">Create</h1>
-        <div class="create-grid-container">
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='character')}}">
-                    <button>Character</button>
-                </form>
-            </div>
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='campaign')}}"">
-                    <button>Campaign</button>
-                </form>
-            </div>
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='item')}}">
-                    <button>Item</button>
-                </form>
-            </div>
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='monster')}}">
-                    <button>Monster</button>
-                </form>
-            </div>
-            <!-- <div class="grid-item">
-                <form action="#">
-                    <button>Battle Encounter</button>
-                </form>
-            </div> -->
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='race')}}">
-                    <button>Race</button>
-                </form>
-            </div>
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='spell')}}">
-                    <button>Spell</button>
-                </form>
-            </div>
-        </div>
+        <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Creation</h1>
     </body>
 </html>

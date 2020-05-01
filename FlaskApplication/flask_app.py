@@ -245,13 +245,21 @@ def my_creations():
     return render_template('my_creations.html', filter_entity=filter_entity, filterable_entities=filterable_entities, entities_to_show=entities_to_show, previews=previews, logged_in_user_details=logged_in_user_details)
 
 
-#TODO: stub
 @app.route('/create')
 def create():
     if logged_in_user_details['username'] == None:
         return redirect('/login')
 
     return render_template('create.html', logged_in_user_details=logged_in_user_details)
+
+
+#TODO: stub
+@app.route('/create_details/<entity>')
+def create_details(entity):
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
+    return render_template('create_details.html', chosen_entity=entity, logged_in_user_details=logged_in_user_details)
 
 
 @app.route('/search', methods=['GET', 'POST'])
