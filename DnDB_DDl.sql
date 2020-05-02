@@ -21,7 +21,6 @@ USE csuciklo_dndb;
 -- DROP TABLE spell;
 -- DROP TABLE schoolofmagic;
 -- DROP TABLE `language`;
--- DROP TABLE skillpoint;
 -- DROP TABLE weapon;
 -- DROP TABLE item;
 -- DROP TABLE `character`;
@@ -113,7 +112,6 @@ CREATE TABLE `character`(
     char_public_class VARCHAR(128) NOT NULL DEFAULT "adventurer",
     char_base_hp SMALLINT DEFAULT NULL,
     char_hp_remaining SMALLINT DEFAULT NULL,
-    char_skillpoints_remaining SMALLINT DEFAULT NULL,
     char_overall_level TINYINT NOT NULL DEFAULT 1,
     char_platinum INT NOT NULL DEFAULT 0,
     char_gold INT NOT NULL DEFAULT 0,
@@ -174,13 +172,6 @@ CREATE TABLE spell(
     spell_material TEXT DEFAULT NULL,
     magicschool_id TINYINT DEFAULT NULL,
     dm_id INT(10) DEFAULT NULL
-)ENGINE=InnoDB;
-
-CREATE TABLE skillpoint(
-	skill_id TINYINT,
-    char_id INT(10),
-    skillpoint_amount SMALLINT NOT NULL DEFAULT 1 CHECK(skillpoint_amount >= 0),
-    PRIMARY KEY(skill_id, char_id)
 )ENGINE=InnoDB;
 
 CREATE TABLE raceknownlanguage(
@@ -301,8 +292,6 @@ ALTER TABLE item ADD CONSTRAINT `item_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES du
 ALTER TABLE weapon ADD CONSTRAINT `weapon_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
 ALTER TABLE spell ADD CONSTRAINT `spell_fk_magicschool_id` FOREIGN KEY(magicschool_id) REFERENCES schoolofmagic(magicschool_id);
 ALTER TABLE spell ADD CONSTRAINT `spell_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
-ALTER TABLE skillpoint ADD CONSTRAINT `skillpoint_fk_skill_id` FOREIGN KEY(skill_id) REFERENCES skill(skill_id);
-ALTER TABLE skillpoint ADD CONSTRAINT `skillpoint_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);
 ALTER TABLE raceknownlanguage ADD CONSTRAINT `raceknownlanguage_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
 ALTER TABLE raceknownlanguage ADD CONSTRAINT `raceknownlanguage_fk_language_id` FOREIGN KEY(language_id) REFERENCES `language`(language_id);
 ALTER TABLE characterlearnedlanguage ADD CONSTRAINT `characterlearnedlanguage_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);
