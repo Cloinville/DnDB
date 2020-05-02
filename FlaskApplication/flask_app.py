@@ -221,8 +221,12 @@ def my_creations():
     filterable_entities.extend(creatable_entities)
 
     if request.method == 'POST':
+        # DEBUGGING
         for key in request.form:
             print("{0} : {1}".format(key, request.form[key]))
+
+        # END DEBUGGING
+
         filter_entity = request.form['filter_entity']
         if filter_entity == "":
             entities_to_show.extend(creatable_entities)
@@ -254,7 +258,7 @@ def create():
 
 
 #TODO: stub
-@app.route('/create_details/<entity>')
+@app.route('/create_details/<entity>', methods=['GET', 'POST'])
 def create_details(entity):
     if logged_in_user_details['username'] == None:
         return redirect('/login')
@@ -264,7 +268,19 @@ def create_details(entity):
     include_text_attrs = True
     alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs)
 
-    fk_set_list = get_fk_set_list(chosen_entity)
+    include_creator_id = False
+    fk_set_list = get_fk_set_list(chosen_entity, include_creator_id)
+
+    # TODO 5/1: determine which associative tables to include, and add fields for those
+    #           a. Need to distinguish between those w/set number, and those that are dynamic
+    #           b. AND for those that are dynamic, need way for users to increase # of fields
+
+    if request.method == "POST":
+        if request.form['submit_btn'] == "Quit":
+            return redirect('/index')
+        else:
+            for key in request.form:
+                print("{0}, {1}".format(key, request.form[key]))
     # 1. Get all fields directly in the record of that entity
     # 2. Get all foreign fields
     #    a. If DM_ID, DON'T SHOW
@@ -284,7 +300,10 @@ def search():
     if request.method == 'POST':
         chosen_entity = request.form['chosen_entity']
         search_fields_url = "search_fields_template/{0}".format(chosen_entity.lower())
+
+        # DEBUGGING
         print(chosen_entity)
+        # END DEBUGGING
 
         return render_template('search.html', entities=searchable_entities, chosen_entity=chosen_entity, search_fields_link=search_fields_url, logged_in_user_details=logged_in_user_details)
     return render_template('search.html', entities=searchable_entities, chosen_entity=searchable_entities[0], search_fields_link=None, logged_in_user_details=logged_in_user_details)
@@ -298,9 +317,11 @@ def search_fields_template(name):
     # TODO: this is currently kind of arbitrary. Remove?      
     include_text_attrs = False
 
+    include_creator_id = True
+
     alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs)
 
-    fk_set_list = get_fk_set_list(chosen_entity)
+    fk_set_list = get_fk_set_list(chosen_entity, include_creator_id)
 
     return render_template('search_fields_template.html', chosen_entity=chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, fk_set_list=fk_set_list)
 
@@ -315,7 +336,11 @@ def search_result():
         for item in request.form:
             key = item
             value = request.form[item]
+
+            # DEBUGGING
             print("KEY VALUE: '{0}', '{1}'".format(key,value))
+            # END DEBUGGING
+
             if key == "chosen_entity":
                 chosen_entity = value.lower()
             elif value != "":
@@ -369,13 +394,16 @@ def entity_details():
     if request.method == 'POST':
         post_key = ""
         post_value = ""
+
+        # DEBUGGING
         for key in request.form:
-            if "_btn" in key:
+            if key.endswith("_btn"):
                 post_key = key
                 post_value = request.form[key]
-                print("YUP: {0}, {1}".format(key, request.form[key]))
+                print("YUP: {0}, {1} -> need to strip off _btn from end to get chosen_entity".format(post_key, post_value))
             else:
                 print("nope: {0}, {1}".format(key, request.form[key]))
+        # END DEBUGGING
 
     return render_template('entity_details.html', logged_in_user_details=logged_in_user_details)
 
@@ -423,7 +451,11 @@ def update_player_nickname(nickname):
     if successful_update:
 
         updated_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_id = {0}".format(player_id))[0][0]
+
+        # DEBUGGING
         print("UPDATED NICKNAME: {0}".format(updated_nickname))
+        # END DEBUGGING
+
         logged_in_user_details['nickname'] = updated_nickname
 
 
@@ -463,7 +495,7 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs):
     return alphanumeric_attr_list, enum_attr_list
 
 
-def get_fk_set_list(chosen_entity):
+def get_fk_set_list(chosen_entity, include_creator):
     foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
     
     # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
@@ -471,36 +503,30 @@ def get_fk_set_list(chosen_entity):
 
     # For each foreign table that the base table references (given as pair: foreign key col name in base table, referenced table name)
     for pair in foreign_key_names_and_tables:
-        # Get the name of the table referenced by the current foreign key
+        local_fk_name = pair[0]
         referenced_table = pair[1]
 
-        # Get the display and identification information for all records in that table
-        referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
+        is_creator_reference = (local_fk_name.lower() == "player_id" and chosen_entity == "character") or (local_fk_name.lower() == "dm_id")
+
+        if include_creator or not is_creator_reference:
+            # Get the display and identification information for all records in that table
+            referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
         
-        # If there were records in the table
-        if len(referenced_table_record_names_and_metadata) > 0:
+            # If there were records in the table
+            if len(referenced_table_record_names_and_metadata) > 0:
 
-            # Save the name of the fk column for use in searching later
-            foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
+                # Save the name of the fk column for use in searching later
+                foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
 
-            # Insert a dummy entry, to have a "no selection" option for dropdowns
-            referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
+                # Insert a dummy entry, to have a "no selection" option for dropdowns
+                referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
             
-            # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
-            fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+                # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
+                fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
             
-            print([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+                print([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
 
     return fk_set_list
-
-
-# def get_player_id():
-#     # player_id = execute_cmd_and_get_result("SELECT get_player_id_from_username('{0}')".format(logged_in_user))[0][0]
-#     return player_id
-
-
-# def get_dm_id():
-#     dm_id = execute_cmd_and_get_result("CALL get_dm_id_for_player('{0}')".format(logged_in_user))
 
 
 def upgrade_player_to_dm():
@@ -544,7 +570,6 @@ def execute_cmd_and_get_result(cursor_cmd):
     return result
 
 
-# TODO: refactor code to use this as replacement
 def execute_cmd(cursor_cmd):
     db = connect()
     cursor = db.cursor()
@@ -571,7 +596,9 @@ def execute_cmd(cursor_cmd):
 
 def execute_field_update(entity, field, new_value, condition):
     try:
+        # DEBUGGING
         print("FIELD UPDATE: CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
+        # END DEBUGGING
         execute_cmd("CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
         return True
 
@@ -633,57 +660,13 @@ def convert_mysql_datatype_to_html_datatype(datatype):
     return datatype_text_type, datatype_length
 
 
-    # if "int" in datatype:
-    #     try:
-    #         # To simplify the program, will assume number of digits of input is less than the maximum allowed
-    #         int(str)
-    #         return True
-    #     except ValueError:
-    #         print("Error: Got invalid type for input '{0}' with type {1}".format(str, datatype))
-    #         return False
-
-    # elif "varchar" in datatype:
-    #     max_len = datatype.split("(")[1][:-1]
-    #     try:
-    #         if len(str) <= int(max_len):
-    #             return True
-    #         else:
-    #             return False
-    #     except ValueError:
-    #         print("Error: Got a weird max length value: {0}, with type {1}".format(max_len, type(max_len)))
-    #         return False
-
-    # elif datatype == "float":
-    #     try:
-    #         float(str)
-    #         return True
-    #     except ValueError:
-    #         return False
-
-    # else:
-    #     print("Error: Got a weird data type: {0}. Allowing command to proceed to let the database catch the error".format(datatype))
-    #     return True
-
-
-# def get_unique_display_names_and_cols_for_all_records_in_table(entity):
-    # try:
-    #     select_statement = get_display_and_column_names_select_statement_as_str(entity)
-    #     raw_display_names = execute_cmd_and_get_result(select_statement)
-    #     formatted_display_names = []
-    #     for name in raw_display_names:
-    #         formatted_name = name[0]
-    #         formatted_col = name[1]
-    #         if formatted_name not in formatted_display_names:
-    #             formatted_display_names.append([formatted_name, formatted_col])
-    #     return formatted_display_names
-    # except:
-    #     return []
-
-
 def get_formatted_previews_and_metadata_list(unformatted_records):
     # unformatted_records, even if no search results, will ALWAYS have
     # at least one entry
+
+    # DEBUGGING
     print("UNFORMATTED: '{0}'".format(unformatted_records))
+    # END DEBUGGING
     if len(unformatted_records) <= 1:
         return None
 
@@ -702,22 +685,21 @@ def get_formatted_previews_and_metadata_list(unformatted_records):
         end_index = min(len(record), num_cols)
         for i in range(0, min(1, end_index)):
             curr_record_identifier_metadata_pair = [column_names_list[i], record[i]]
+            # DEBUGGING
             print("identifier_pair: {0}".format(curr_record_identifier_metadata_pair))
+            # END DEBUGGING
 
         for i in range(1, min(2, end_index)):
             curr_record_table_name = record[i]
+            # DEBUGGING
             print("table_name: {0}".format(curr_record_table_name))
+            # END DEBUGGING
 
         for i in range(2, min(3, end_index)):
             curr_record_identifier_pair = [column_names_list[i], record[i]]
+            # DEBUGGING
             print("col_val_pair: {0}".format(curr_record_identifier_pair))
-
-        # for i in range(3, min(4, end_index)):
-        #     curr_record_headliner_col_val_pair = [column_names_list[i], record[i]]
-        #     print("headliner pair: {0}".format(curr_record_headliner_col_val_pair))
-
-        # for i in range(4, end_index):
-        #     curr_record_column_value_pairs.append([column_names_list[i], record[i]])
+            # END DEBUGGING
 
         for i in range(3, end_index):
             curr_record_column_value_pairs.append([column_names_list[i], record[i]])
@@ -728,6 +710,89 @@ def get_formatted_previews_and_metadata_list(unformatted_records):
         formatted_records = None
 
     return formatted_records
+
+
+@app.route('/players', methods=['GET', 'POST'])
+def players():
+    if request.method == "POST":
+        for key in request.form:
+            print("{0}, {1}".format(key, request.form[key]))
+    return render_template('players.html')
+
+
+@app.route('/dynamic_fields', methods=['GET', 'POST'])
+def dynamic_fields():
+    if request.method == "POST":
+        # get which option selected: X or +
+        saved_keys = []
+        saved_vals = []
+        decision = ""
+        decision_key = ""
+        attr_name = ""
+        action = ""
+        field_type = ""
+        last_index = 0
+
+        saved_key_val_pairs = []
+
+        for key in request.form:
+            val = request.form[key]
+            print("{0}, {1}".format(key, val))
+            if "decision" in key:
+                decision = val
+                decision_key = key
+                print("DECISION: {0}".format(decision_key))
+
+            elif "attr_name" in key:
+                attr_name = val
+                print("ATTR: {0}".format(attr_name))
+
+            elif "field_type" in key:
+                field_type = val
+                print("FIELD_TYPE: {0}".format(field_type))
+
+            else:
+                if val.endswith("/"):
+                    val = val[0:-1]
+                if key.endswith("/"):
+                    key = key[0:-1]
+                print("STRIPPED VAL: {0}".format(val))
+                saved_keys.append(key)
+                saved_vals.append(val)
+        
+        if "delete" in decision_key:
+            action = "delete"
+            attr_to_delete = decision_key[len("decision_delete_"):]
+            print("ATTR TO DELETE: {0}".format(attr_to_delete))
+            del_index = saved_keys.index(attr_to_delete)
+            del saved_keys[del_index]
+            del saved_vals[del_index]
+
+        else:
+            action = "add"
+            
+        for i in range(0, min(len(saved_keys), len(saved_vals))):
+            saved_key_val_pairs.append([saved_keys[i], saved_vals[i]])
+        
+    else:
+        field_type = "text"
+        action = "initialize"
+        saved_key_val_pairs = []
+        saved_key_val_pairs.append(["dm_id_0", '0th-value'])
+        saved_key_val_pairs.append(["dm_id_1", '1st value'])
+        saved_key_val_pairs.append(["dm_id_2", '2nd value'])
+        saved_key_val_pairs.append(["dm_id_3", '3rd value'])
+        attr_name = "dm_id"
+        # length = len(saved_key_val_pairs)
+    # TODO: rather than length, should have a "last unique id" value
+    # length = len(saved_key_val_pairs)
+    last_attr = saved_key_val_pairs[len(saved_key_val_pairs) - 1][0]
+    attr_prefix = "{0}_".format(attr_name)
+    length = int(last_attr[len(attr_prefix):]) + 1
+    print("LENGTH: {0}".format(length))
+
+    return render_template('dynamic_fields.html', attr_name=attr_name, action=action, field_type=field_type, saved_val=saved_key_val_pairs, length=length)
+            
 
 
 if __name__ == '__main__':
