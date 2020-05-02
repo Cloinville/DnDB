@@ -9,3 +9,6 @@ test.sql
 FlaskApplication/templates/players.html
 FlaskApplication/templates/players.html
 FlaskApplication/templates/players.html
+FlaskApplication/scratch.py
+FlaskApplication/static/jquery-3.5.0.js
+FlaskApplication/scratch.py
