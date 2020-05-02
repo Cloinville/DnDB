@@ -32,38 +32,57 @@
                 </div>
         </header>
         <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Creation</h1>
-        <form action="{{ url_for('search_result') }}" target="_PARENT" method="POST" autocomplete="off">
+        <form action="" method="POST" autocomplete="off">
+            <!-- Input below is a hidden field used to pass the chosen_entity value to the search_result page -->
             <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
+            <table>
             {% for alphanumeric_attr_with_datatype in alphanumeric_attr_list %}
-            <p>
-                {{alphanumeric_attr_with_datatype[0]}} : <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" placeholder=""/>
-            </p>
+            <tr>
+                <td>
+                    {{alphanumeric_attr_with_datatype[0]}} : 
+                </td>
+                <td>
+                    <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" placeholder=""/>
+                </td>
+            </tr>
             {% endfor %}
             {% for enum_attr in enum_attr_list %}
-            <p>
-                <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
-                <select id={{enum_attr[0]}} name={{enum_attr[0]}}>
-                    {% for enum_val in enum_attr[1] %}
-                        <option value="{{enum_val}}">{{enum_val}}</option>
-                    {% endfor %}
-                </select>
-            </p>
+            <tr>
+                <td>
+                    <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                </td>
+                <td>
+                    <select id={{enum_attr[0]}} name={{enum_attr[0]}}>
+                        {% for enum_val in enum_attr[1] %}
+                            <option value="{{enum_val}}">{{enum_val}}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
             {% endfor %}
             {% for fk_set in fk_set_list %}
-            <p>
-                <label for={{fk_set[0]}}>{{fk_set[0]}} : </label>
-                <select id={{fk_set[1]}} name={{fk_set[1]}}>
-                    {% for fk_value_and_metadata in fk_set[2] %}
-                    <p>0: {{fk_value_and_metadata[0]}}</p>
-                    <p>1: {{fk_value_and_metadata[1]}}</p>
-                    <p>2: {{fk_value_and_metadata[2]}}</p>
-                    <p>3: {{fk_value_and_metadata[3]}}</p>
-                    <option value={{fk_value_and_metadata[2]}}>{{fk_value_and_metadata[0]}}</option>
-                    {% endfor %}
-                </select>
-            </p>
+            <tr>
+                <td>
+                    <label for={{fk_set[0]}}>{{fk_set[0]}} : </label>
+                </td>
+                <td>
+                    <select id={{fk_set[1]}} name={{fk_set[1]}}>
+                        {% for fk_value_and_metadata in fk_set[2] %}
+                        <option value={{fk_value_and_metadata[2]}}>{{fk_value_and_metadata[0]}}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
             {% endfor %}
-            <input type="submit" value="Search">
+            <tr>
+                <td>
+                    <input type="submit" name="submit_btn" value="Create">
+                </td>
+                <td>
+                    <input type="submit" name="submit_btn" value="Quit">
+                </td>
+            </tr>
+            </table>
         </form>
     </body>
 </html>
