@@ -259,7 +259,20 @@ def create_details(entity):
     if logged_in_user_details['username'] == None:
         return redirect('/login')
 
-    return render_template('create_details.html', chosen_entity=entity, logged_in_user_details=logged_in_user_details)
+    chosen_entity = entity
+
+    include_text_attrs = True
+    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs)
+
+    fk_set_list = get_fk_set_list(chosen_entity)
+    # 1. Get all fields directly in the record of that entity
+    # 2. Get all foreign fields
+    #    a. If DM_ID, DON'T SHOW
+    #    b. Else, do drop down thing from search
+    # 3. Options for associative records
+    #
+
+    return render_template('create_details.html', chosen_entity=entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, fk_set_list=fk_set_list, logged_in_user_details=logged_in_user_details)
 
 
 @app.route('/search', methods=['GET', 'POST'])
@@ -281,58 +294,13 @@ def search():
 @app.route('/search_fields_template/<name>')
 def search_fields_template(name):
     chosen_entity = name
-   # TODO: Finish POST request handling
-    # if request.method == "POST":
-    #     # Showing how can access the key and value of every field
-    #     search_fields = []
-    #     for item in request.form:
-    #         key = item
-    #         value = request.form[item]
-    #         if value != "":
-    #             search_fields.append([key, value])
-        
-    #     session['search_fields'] = search_fields
-    #     return redirect(url_for('search_result'))
-        
-        # TODO 4/26: add final REDIRECT function, to reroute the results of the 
-        #            SELECT statement created using these key-values into search results page
-        # ie. return redirect(url_for('search_results', query=query))       
 
-    attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}')".format(chosen_entity))
-    alphanumeric_attr_list = []
-    enum_attr_list = []
-    for attr_set in attr_datatype_list:
-        attr_name = attr_set[0]
-        attr_datatype = attr_set[1]
+    # TODO: this is currently kind of arbitrary. Remove?      
+    include_text_attrs = False
 
-        #NOTE: might need add .lower() to datatype
-        if "enum" in attr_datatype:
-            enum_vals = attr_datatype.split("enum")[1][1:-1].split(",")
-            enum_vals.insert(0, default_dropdown_str)
-            enum_attr_list.append([attr_name, enum_vals])
-        else:
-            if "text" not in attr_datatype:
-                alphanumeric_attr_list.append(attr_name)
+    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs)
 
-    foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
-    fk_set_list = []
-    # For each foreign table that the base table references
-    for pair in foreign_key_names_and_tables:
-        # Get the name of the table
-        referenced_table = pair[1]
-        # Get the display and identification information for all records in that table
-        referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
-        
-        # If there were records in the table
-        if len(referenced_table_record_names_and_metadata) > 0:
-            # Save the name of the fk column for use in searching later
-            foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
-
-            # Insert a dummy entry, to have a "no selection" option for dropdowns
-            referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
-            
-            # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
-            fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+    fk_set_list = get_fk_set_list(chosen_entity)
 
     return render_template('search_fields_template.html', chosen_entity=chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, fk_set_list=fk_set_list)
 
@@ -468,6 +436,64 @@ def password_invalid(password):
     return re.search(r'[^a-zA-Z0-9_]', password)
 
 
+def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs):
+    attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}')".format(chosen_entity))
+
+    # List format: [(name, datatype), (name, datatype), ...]
+    alphanumeric_attr_list = []
+
+    # List format: [(name, (allowed_val, allowed_val,...)), (name, (allowed_val, allowed_val, ...))]
+    enum_attr_list = []
+
+    # Parse through all local attributes received, distinguishing enums from all other types
+    for attr_set in attr_datatype_list:
+        attr_name = attr_set[0]
+        attr_datatype = attr_set[1]
+
+        # If an enum, convert all of the allowed values into a list, and associate list w/attr name
+        if "enum" in attr_datatype:
+            enum_vals = attr_datatype.split("enum")[1][1:-1].split(",")
+            enum_vals.insert(0, default_dropdown_str)
+            enum_attr_list.append([attr_name, enum_vals])
+        else:
+            if "text" not in attr_datatype or include_text_attrs:
+                attr_datatype_html_pattern, attr_datatype_html_length = convert_mysql_datatype_to_html_datatype(attr_datatype)
+                alphanumeric_attr_list.append([attr_name, attr_datatype_html_pattern, attr_datatype_html_length])
+
+    return alphanumeric_attr_list, enum_attr_list
+
+
+def get_fk_set_list(chosen_entity):
+    foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
+    
+    # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
+    fk_set_list = []
+
+    # For each foreign table that the base table references (given as pair: foreign key col name in base table, referenced table name)
+    for pair in foreign_key_names_and_tables:
+        # Get the name of the table referenced by the current foreign key
+        referenced_table = pair[1]
+
+        # Get the display and identification information for all records in that table
+        referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
+        
+        # If there were records in the table
+        if len(referenced_table_record_names_and_metadata) > 0:
+
+            # Save the name of the fk column for use in searching later
+            foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
+
+            # Insert a dummy entry, to have a "no selection" option for dropdowns
+            referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
+            
+            # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
+            fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+            
+            print([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+
+    return fk_set_list
+
+
 # def get_player_id():
 #     # player_id = execute_cmd_and_get_result("SELECT get_player_id_from_username('{0}')".format(logged_in_user))[0][0]
 #     return player_id
@@ -576,6 +602,68 @@ def get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(entity)
         return results
     except:
         return []
+
+
+# Should only ever be used to for non-enums
+def convert_mysql_datatype_to_html_datatype(datatype):
+    datatype_text_type = ""
+    datatype_length = ""
+
+    alphanumeric = "[a-zA-Z0-9_ ]+" 
+    numeric = "[0-9]+"
+
+    datatype = datatype.lower()
+
+    if "enum" in datatype:
+        datatype_text_type = alphanumeric
+        datatype_length = 255
+
+    elif "text" in datatype:
+        datatype_text_type = alphanumeric
+        datatype_length = 2048
+
+    elif "varchar" in datatype:
+        datatype_text_type = alphanumeric
+        datatype_length = datatype.split("(")[1][:-1]
+
+    elif "int" in datatype:
+        datatype_text_type = numeric
+        datatype_length = datatype.split("(")[1][:-1]
+
+    return datatype_text_type, datatype_length
+
+
+    # if "int" in datatype:
+    #     try:
+    #         # To simplify the program, will assume number of digits of input is less than the maximum allowed
+    #         int(str)
+    #         return True
+    #     except ValueError:
+    #         print("Error: Got invalid type for input '{0}' with type {1}".format(str, datatype))
+    #         return False
+
+    # elif "varchar" in datatype:
+    #     max_len = datatype.split("(")[1][:-1]
+    #     try:
+    #         if len(str) <= int(max_len):
+    #             return True
+    #         else:
+    #             return False
+    #     except ValueError:
+    #         print("Error: Got a weird max length value: {0}, with type {1}".format(max_len, type(max_len)))
+    #         return False
+
+    # elif datatype == "float":
+    #     try:
+    #         float(str)
+    #         return True
+    #     except ValueError:
+    #         return False
+
+    # else:
+    #     print("Error: Got a weird data type: {0}. Allowing command to proceed to let the database catch the error".format(datatype))
+    #     return True
+
 
 # def get_unique_display_names_and_cols_for_all_records_in_table(entity):
     # try:

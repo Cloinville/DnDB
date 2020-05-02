@@ -5,9 +5,9 @@
     <body>
         <form action="{{ url_for('search_result') }}" target="_PARENT" method="POST" autocomplete="off">
             <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
-            {% for alphanumeric_attr in alphanumeric_attr_list %}
+            {% for alphanumeric_attr_with_datatype in alphanumeric_attr_list %}
             <p>
-                {{alphanumeric_attr}} : <input type="text" name={{alphanumeric_attr}} placeholder=""/>
+                {{alphanumeric_attr_with_datatype[0]}} : <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" placeholder=""/>
             </p>
             {% endfor %}
             {% for enum_attr in enum_attr_list %}
