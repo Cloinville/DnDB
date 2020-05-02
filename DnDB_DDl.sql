@@ -10,13 +10,10 @@ USE csuciklo_dndb;
 -- DROP TABLE learnedspell;
 -- DROP TABLE class;
 -- DROP TABLE classlevelnewspellscount;
--- DROP TABLE vulnerability;
--- DROP TABLE resistance;
 -- DROP TABLE raceknownlanguage;
 -- DROP TABLE characterlearnedlanguage;
 -- DROP TABLE characterinventoryitem;
 -- DROP TABLE monsterlootitem;
--- DROP TABLE spellcomponent;
 -- DROP TABLE monsterencounter;
 -- DROP TABLE monsterparty;
 -- DROP TABLE characterabilityscore;
@@ -24,11 +21,8 @@ USE csuciklo_dndb;
 -- DROP TABLE spell;
 -- DROP TABLE schoolofmagic;
 -- DROP TABLE `language`;
--- DROP TABLE skillpoint;
 -- DROP TABLE weapon;
 -- DROP TABLE item;
--- DROP TABLE damagetype;
--- DROP TABLE spellslot;
 -- DROP TABLE `character`;
 -- DROP TABLE monster;
 -- DROP TABLE race;
@@ -85,7 +79,7 @@ CREATE TABLE monster(
 	monster_id INT(10) PRIMARY KEY AUTO_INCREMENT,
     monster_name VARCHAR(128) DEFAULT NULL,
     monster_ac TINYINT NOT NULL DEFAULT 10,
-    monster_challenge_rating FLOAT NOT NULL DEFAULT 0,
+    monster_challenge_rating FLOAT DEFAULT NULL,
     monster_description TEXT DEFAULT NULL,
     monster_base_hp SMALLINT DEFAULT 0,
     monster_type ENUM(
@@ -118,7 +112,6 @@ CREATE TABLE `character`(
     char_public_class VARCHAR(128) NOT NULL DEFAULT "adventurer",
     char_base_hp SMALLINT DEFAULT NULL,
     char_hp_remaining SMALLINT DEFAULT NULL,
-    char_skillpoints_remaining SMALLINT DEFAULT NULL,
     char_overall_level TINYINT NOT NULL DEFAULT 1,
     char_platinum INT NOT NULL DEFAULT 0,
     char_gold INT NOT NULL DEFAULT 0,
@@ -129,21 +122,13 @@ CREATE TABLE `character`(
     player_id INT(10) NOT NULL
 )ENGINE=InnoDB;
 
-CREATE TABLE spellslot(
-	char_id INT(10),
-    spellslot_level TINYINT NOT NULL CHECK(spellslot_level >= 1),
-    spellslot_num TINYINT NOT NULL CHECK(spellslot_num >= 0),
-    spellslot_is_unused BOOLEAN NOT NULL DEFAULT TRUE,
-    PRIMARY KEY(char_id, spellslot_level, spellslot_num)
-)ENGINE=InnoDB;
-
 CREATE TABLE item(
 	item_id INT(10) PRIMARY KEY AUTO_INCREMENT, # changed [first table where NOTED change]
     item_name VARCHAR(128) DEFAULT NULL,
     item_description TEXT DEFAULT NULL,
     item_rarity ENUM(
 						"common", "uncommon", "rare", "very rare", "legendary"
-					)NOT NULL DEFAULT "common",
+					) NOT NULL DEFAULT "common",
     item_type ENUM(
 					"armor", "weapon", "potion", "ring", "rod", "scroll", "staff",
 					"wand", "wondrous item", "equipment", "shiled", "ammunition",
@@ -156,7 +141,7 @@ CREATE TABLE item(
 
 CREATE TABLE weapon(
 	weapon_id SMALLINT PRIMARY KEY AUTO_INCREMENT,
-    weapon_num_dice_to_roll TINYINT NOT NULL DEFAULT 1,
+    weapon_num_dice_to_roll VARCHAR(4) NOT NULL,
     weapon_damage_modifier TINYINT NOT NULL DEFAULT 0,
     weapon_range SMALLINT DEFAULT NULL,
     damage_type VARCHAR(32) NOT NULL,
@@ -184,33 +169,9 @@ CREATE TABLE spell(
     spell_casting_time VARCHAR(64) DEFAULT NULL,
     spell_duration VARCHAR(64) DEFAULT NULL,
     spell_is_concentration BOOLEAN NOT NULL DEFAULT FALSE,
+    spell_material TEXT DEFAULT NULL,
     magicschool_id TINYINT DEFAULT NULL,
     dm_id INT(10) DEFAULT NULL
-)ENGINE=InnoDB;
-
-CREATE TABLE skillpoint(
-	skill_id TINYINT,
-    char_id INT(10),
-    skillpoint_amount SMALLINT NOT NULL DEFAULT 1 CHECK(skillpoint_amount >= 0),
-    PRIMARY KEY(skill_id, char_id)
-)ENGINE=InnoDB;
-
-CREATE TABLE damagetype(
-	damage_type_id TINYINT PRIMARY KEY AUTO_INCREMENT,
-    damage_type_name VARCHAR(32) NOT NULL,
-    damage_type_description TEXT DEFAULT NULL
-)ENGINE=InnoDB;
-
-CREATE TABLE vulnerability(
-	race_id SMALLINT,
-    damage_type_id TINYINT,
-    PRIMARY KEY(race_id, damage_type_id)
-)ENGINE=InnoDB;
-
-CREATE TABLE resistance(
-	race_id SMALLINT,
-    damage_type_id TINYINT,
-    PRIMARY KEY(race_id, damage_type_id)
 )ENGINE=InnoDB;
 
 CREATE TABLE raceknownlanguage(
@@ -235,14 +196,6 @@ CREATE TABLE monsterlootitem(
 	encounter_id INT(11),
     item_id INT(10),
     PRIMARY KEY(encounter_id, item_id)	
-)ENGINE=InnoDB;
-
-CREATE TABLE spellcomponent(
-	spell_id SMALLINT,
-    item_id INT(10),
-    spellcomponent_is_reusable BOOLEAN NOT NULL DEFAULT TRUE,
-    spellcomponent_amount VARCHAR(128) NOT NULL,
-    PRIMARY KEY(spell_id, item_id)
 )ENGINE=InnoDB;
 
 CREATE TABLE monsterencounter(
@@ -298,6 +251,7 @@ CREATE TABLE classlevelnewspellscount(
 	class_id SMALLINT,
     newspellscount_class_level TINYINT NOT NULL DEFAULT 1 CHECK(newspellscount_class_level >= 1),
     newspellscount_cantrips TINYINT NOT NULL DEFAULT 0,
+    newspellscount_spells TINYINT NOT NULL DEFAULT 0,
     newspellscount_spell_slots_level_1 TINYINT NOT NULL DEFAULT 0,
     newspellscount_spell_slots_level_2 TINYINT NOT NULL DEFAULT 0,
     newspellscount_spell_slots_level_3 TINYINT NOT NULL DEFAULT 0,
@@ -334,17 +288,10 @@ ALTER TABLE race ADD CONSTRAINT `race_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES du
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
-ALTER TABLE spellslot ADD CONSTRAINT `spellslot_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);
 ALTER TABLE item ADD CONSTRAINT `item_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE weapon ADD CONSTRAINT `weapon_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
 ALTER TABLE spell ADD CONSTRAINT `spell_fk_magicschool_id` FOREIGN KEY(magicschool_id) REFERENCES schoolofmagic(magicschool_id);
 ALTER TABLE spell ADD CONSTRAINT `spell_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
-ALTER TABLE skillpoint ADD CONSTRAINT `skillpoint_fk_skill_id` FOREIGN KEY(skill_id) REFERENCES skill(skill_id);
-ALTER TABLE skillpoint ADD CONSTRAINT `skillpoint_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);
-ALTER TABLE vulnerability ADD CONSTRAINT `vulnerability_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
-ALTER TABLE vulnerability ADD CONSTRAINT `vulnerability_fk_damage_type_id` FOREIGN KEY(damage_type_id) REFERENCES damagetype(damage_type_id);
-ALTER TABLE resistance ADD CONSTRAINT `resistance_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
-ALTER TABLE resistance ADD CONSTRAINT `resistance_fk_damage_type_id` FOREIGN KEY(damage_type_id) REFERENCES damagetype(damage_type_id);
 ALTER TABLE raceknownlanguage ADD CONSTRAINT `raceknownlanguage_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
 ALTER TABLE raceknownlanguage ADD CONSTRAINT `raceknownlanguage_fk_language_id` FOREIGN KEY(language_id) REFERENCES `language`(language_id);
 ALTER TABLE characterlearnedlanguage ADD CONSTRAINT `characterlearnedlanguage_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);
@@ -353,8 +300,6 @@ ALTER TABLE characterinventoryitem ADD CONSTRAINT `characterinventoryitem_fk_cha
 ALTER TABLE characterinventoryitem ADD CONSTRAINT `characterinventoryitem_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
 ALTER TABLE monsterlootitem ADD CONSTRAINT `monsterlootitem_fk_encounter_id` FOREIGN KEY(encounter_id) REFERENCES monsterencounter(encounter_id);
 ALTER TABLE monsterlootitem ADD CONSTRAINT `monsterlootitem_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
-ALTER TABLE spellcomponent ADD CONSTRAINT `spellcomponent_fk_spell_id` FOREIGN KEY(spell_id) REFERENCES spell(spell_id);
-ALTER TABLE spellcomponent ADD CONSTRAINT `spellcomponent_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
 ALTER TABLE monsterencounter ADD CONSTRAINT `monsterencounter_fk_monster_id` FOREIGN KEY(monster_id) REFERENCES monster(monster_id);
 ALTER TABLE monsterencounter ADD CONSTRAINT `monsterencounter_fk_monsterparty_id` FOREIGN KEY(monsterparty_id) REFERENCES monsterparty(monsterparty_id);
 ALTER TABLE monsterparty ADD CONSTRAINT `monsterparty_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
