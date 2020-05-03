@@ -1,0 +1,266 @@
+*
+{
+    margin:0;
+    padding:0;
+    font-family: sans-serif;
+}
+
+body{
+    background-color: #478547;
+}
+
+/*
+body.signup_page{
+    background-color: #2d532d;
+}
+*/
+
+header.page{
+    background-color: #2d862d;
+}
+
+.nav-bar
+{
+    background-color: #000;
+    height: 141px;
+}
+
+.nav-bar h1
+{
+    text-align: center;
+    color: #fff;
+    background-color: 	#2d532d;
+    font-family: sans-serif;
+    font-size: 48px;
+    padding: 25px;
+}
+
+.menu{
+    background-color: #000;
+    text-align:center;
+    list-style: none;
+    margin: 80px, 0px;
+}
+
+.menu li{
+    display: inline-block;
+    margin: 10px 5px;
+}
+
+.menu li a{
+    /*background-color: #2d862d;*/
+    background-color: #000;
+    text-decoration: none;
+    color: #fff;
+    padding: 5px 10px;
+    font-family: sans-serif;
+    letter-spacing: 2px;
+    /*border: 1px solid #fff;*/
+}
+
+.menu li a:hover{
+    background: #fff;
+    transition: .2s;
+    color: #000;
+}
+
+.login_page h1, .signup_page h1{
+    color: #fff;
+    text-align: center;
+    font-size: 48px;
+    margin: 40px;
+}
+
+.login_box{
+    width: 320px;
+    height: 420px;
+    background: #000;
+    color: #fff;
+    top: 55%;
+    left: 50%;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+    padding: 70px 30px;
+    border-radius: 0px;
+    border: 1px solid #fff;
+}
+
+.signup_box{
+    width: 320px;
+    height: 580px;
+    background: #000;
+    color: #fff;
+    top: 55%;
+    left: 50%;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+    padding: 70px 30px;
+    border-radius: 0px;
+    border: 1px solid #fff;
+}
+
+.avatar{
+    background-color: #2d532d;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    position: absolute;
+    top:-50px;
+    left: calc(50% - 50px);
+    border: 1px solid #fff;
+}
+
+.login_box h1, .signup_box h1{
+    margin:0;
+    padding:0 0 20px;
+    text-align: center;
+    font-size: 22px;
+    font-family: sans-serif;
+    background-color: black;
+}
+
+.login_box p, .signup_box p{
+    margin: 0;
+    padding: 0;
+    font-weight: bold;
+    background: black;
+}
+
+.login_box input, .signup_box input{
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.login_box input[type="text"], input[type="password"], .signup_box input[type="text"], input[type="password"]{
+    border: none;
+    border-bottom: 1px solid #fff;
+    background: transparent;
+    outline: none;
+    height: 40px;
+    color: white;
+    font-size: 16px;
+}
+
+.login_box input[type="submit"], .signup_box input[type="submit"]
+{
+    border: none;
+    outline: none;
+    height: 40px;
+    background:     #478547;
+    font-size: 18px;
+    border-radius: 20px;
+}
+
+.login_box input[type="submit"]:hover, .signup_box input[type="submit"]:hover{
+    cursor: pointer;
+    background: #ccc;
+    color: #000;
+    transition: .1s;
+}
+
+.login_box a, .signup_box a{
+    text-decoration: none;
+    font-size: 12px;
+    line-height: 20px;
+    color: darkgrey;
+}
+
+.login_box a:hover, .signup_box a:hover{
+    color: #ccc;
+}
+
+.signup_redirect{
+    font-size: 14px;
+    font-weight: normal;
+}
+
+.hidden{
+    visibility: visible;
+    color:#df2020;
+    font-size: 12px;
+}
+
+.grid-container{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 100px;
+    width: 600px;
+    margin: auto;
+    height:300px;
+    line-height: 50px;
+    margin-top: 25px;
+}
+
+.grid-container a, button{
+    display:block;
+    text-decoration: none;
+    color:white;
+    background-color: black;
+    height:100px;
+    text-align: center;
+    width: 250px;
+    font-family: sans-serif;
+    font-size: 30px;
+    border: none;
+    border-radius: 10px;
+}
+
+.grid-container button:hover{
+    cursor: pointer;
+    background-color: white;
+    color: black;
+    transition: .2s;
+}
+.campaign_previews{
+    height: 400px;
+    width: 600px;
+    margin: auto;
+    margin-top: 25px;
+    overflow: auto;
+    scrollbar-width: none;
+    display:grid;
+    grid-gap: 20px;
+}
+
+.preview-item{
+    height: 100px;
+}
+
+.campaign_previews button{
+    width: 90%;
+    height: auto;
+    margin: auto;
+    padding: 20px;
+}
+
+.preview-item h1{
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.preview-item p{
+    font-size: 24px;
+    padding-top: 20px;
+    color: #ccc;
+}
+
+.page_title{
+    font-size: 80px;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    padding:25px;
+}
+
+.campaign_previews button:hover{
+    cursor: pointer;
+    background: white;
+    color: black;
+    transition: .2s;
+}
+
+iframe{
+    border: none;
+}

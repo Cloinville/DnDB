@@ -1,0 +1,43 @@
+<html>
+    <head>
+        <title> DnDB Homepage </title>
+        <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <header class="page">
+            <div class="nav-bar">
+                <h1>DnDB</h1>
+                <ul class="menu">
+                    <li><a href="{{ url_for('index') }}">Home</a></li>
+                    <li><a href="{{ url_for('my_campaigns') }}">My Campaigns</a></li>
+                    <li><a href="{{ url_for('my_creations') }}">My Creations</a></li>
+                    <li><a href="{{ url_for('create') }}">Create</a></li>
+                    <li><a href="{{ url_for('search') }}">Search</a></li>
+                </ul>
+            </div>
+        </header>
+        <h1 class="page_title">Home</h1>
+        <div class="grid-container">
+            <div class="grid-item">
+                <form action="{{ url_for('my_campaigns') }}">
+                    <button>My Campaigns</button>
+                </form>
+            </div>
+            <div class="grid-item">
+                <form action="{{ url_for('my_creations') }}">
+                    <button>My Creations</button>
+                </form>
+            </div>
+            <div class="grid-item">
+                <form action="{{ url_for('create') }}">
+                    <button>Create</button>
+                </form>
+            </div>
+            <div class="grid-item">
+                <form action="{{ url_for('search') }}">
+                    <button>Search</button>
+                </form>
+            </div>
+        </div>
+    </body>
+</html>

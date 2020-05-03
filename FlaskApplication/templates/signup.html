@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <title>Create a DnDB Account</title>
+        <link rel="stylesheet" type="text/css" href="../static/styles/style.css">
+        <body class="signup_page">
+            <div class="signup_page">
+                <div class="signup_box">
+                    <h1>Sign Up</h1>
+                    <form method="POST" action="" autocomplete="off">
+                        {% if error %}
+                            <div class="hidden"> <p class="error" style="color:#df2020; font-size:12px;margin-bottom:10px;"><strong>Error: </strong> {{error}}</p></div>
+                        {% endif %}
+                        <p>Username</p>
+                        <input type="text" name="username" placeholder="Enter username" title="1-32 characters, alphanumeric and underscores only" maxlength="32" pattern="[a-zA-Z0-9_]+" required/>
+                        <p>Nickname</p>
+                        <input type="text" name="nickname" placeholder="Enter nickname (optional)" maxlength="128"/>
+                        <p>Password</p>
+                        <input type="password" name="password" placeholder="Enter password"title="1-32 characters, alphanumeric and underscores only" maxlength="32" pattern="[a-zA-Z0-9_]+" required/>
+                        <p>Confirm Password</p>
+                        <input type="password" name="password_confirm" placeholder="Confirm your password" />
+                        <input type="submit" name="" value="Create Account">
+                    </form>
+                    <a href="{{ url_for('login') }}">Log in with existing account</a>
+                </div>
+            </div>
+        </body>
+    </head>
+</html>
