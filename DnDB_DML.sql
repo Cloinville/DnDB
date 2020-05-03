@@ -587,3 +587,68 @@ BEGIN
 	EXECUTE stmt;
 END $$
 DELIMITER ;
+
+DROP TRIGGER IF EXISTS delete_character_trigger;
+DELIMITER $$
+CREATE TRIGGER delete_character_trigger 
+BEFORE DELETE 
+  ON `character` FOR EACH ROW
+BEGIN
+  DELETE FROM characterabilityscore WHERE 
+    characterabilityscore.char_id = old.char_id;
+
+  DELETE FROM characterlearnedlanguage WHERE 
+    characterlearnedlanguage.char_id = old.char_id;
+
+  DELETE FROM characterinventoryitem WHERE 
+    characterinventoryitem.char_id = old.char_id;
+
+  DELETE FROM learnedspell WHERE 
+    learnedspell.char_id = old.char_id;
+
+  DELETE FROM characterabilityscore WHERE 
+    characterabilityscore.char_id = old.char_id;
+
+END $$
+DELIMITER ;
+
+# Campaign Delete
+
+DROP TRIGGER IF EXISTS delete_campaign_trigger;
+DELIMITER $$
+CREATE TRIGGER delete_campaign_trigger 
+BEFORE DELETE 
+  ON campaign FOR EACH ROW
+BEGIN
+  
+  DELETE FROM monsterparty WHERE 
+    old.campaign_id = monsterparty.campaign_id;
+
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS delete_monster_party_trigger;
+DELIMITER $$
+CREATE TRIGGER delete_monster_party_trigger 
+BEFORE DELETE 
+  ON monsterparty FOR EACH ROW
+BEGIN
+  
+  DELETE FROM monsterencounter WHERE 
+    old.monsterparty_id = monsterencounter.monsterparty_id;
+
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS delete_monster_encounter_trigger;
+DELIMITER $$
+CREATE TRIGGER delete_monster_encounter_trigger 
+BEFORE DELETE 
+  ON monsterencounter FOR EACH ROW
+BEGIN
+  
+  DELETE FROM monsterlootitem WHERE 
+    old.encounter_id = monsterlootitem.encounter_id;
+
+END $$
+DELIMITER ;
