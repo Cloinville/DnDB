@@ -1,77 +1,77 @@
 use csuciklo_dndb;
 
-DROP VIEW IF EXISTS campaign_players;
-CREATE VIEW campaign_players 
-AS
-SELECT player.player_id,
-	   player.player_username,
-	   `character`.char_id,
-       `character`.char_name,
-       adventuringparty.party_id,
-       adventuringparty.party_name,
-       campaign.campaign_id,
-       campaign.campaign_name,
-       dungeonmaster.dm_id
-FROM player JOIN `character` USING(player_id)
-			JOIN adventuringparty USING(party_id)
-            JOIN campaign USING(party_id)
-            JOIN dungeonmaster USING(dm_id);
+-- DROP VIEW IF EXISTS campaign_players;
+-- CREATE VIEW campaign_players 
+-- AS
+-- SELECT player.player_id,
+-- 	   player.player_username,
+-- 	   `character`.char_id,
+--        `character`.char_name,
+--        adventuringparty.party_id,
+--        adventuringparty.party_name,
+--        campaign.campaign_id,
+--        campaign.campaign_name,
+--        dungeonmaster.dm_id
+-- FROM player JOIN `character` USING(player_id)
+-- 			JOIN adventuringparty USING(party_id)
+--             JOIN campaign USING(party_id)
+--             JOIN dungeonmaster USING(dm_id);
 
-# TODO: remove this, once have implemented Flask-side replacement w/get_previews()
-DROP PROCEDURE IF EXISTS get_campaign_previews;
-DELIMITER $$
-CREATE PROCEDURE get_campaign_previews(IN in_username VARCHAR(32))
-BEGIN
-	SELECT campaign_id,
-		   campaign_name, 
-		   party_name
-    FROM campaign_players
-    WHERE player_username = in_username;
-END $$
-DELIMITER ;
+-- # TODO: remove this, once have implemented Flask-side replacement w/get_previews()
+-- DROP PROCEDURE IF EXISTS get_campaign_previews;
+-- DELIMITER $$
+-- CREATE PROCEDURE get_campaign_previews(IN in_username VARCHAR(32))
+-- BEGIN
+-- 	SELECT campaign_id,
+-- 		   campaign_name, 
+-- 		   party_name
+--     FROM campaign_players
+--     WHERE player_username = in_username;
+-- END $$
+-- DELIMITER ;
 
-# Create a view for each of the associated entities
-DROP VIEW IF EXISTS character_abilities;
-CREATE VIEW character_abilities
-AS
-SELECT *
-FROM characterabilityscore JOIN ability USING(ability_id);
+-- # Create a view for each of the associated entities
+-- DROP VIEW IF EXISTS character_abilities;
+-- CREATE VIEW character_abilities
+-- AS
+-- SELECT *
+-- FROM characterabilityscore JOIN ability USING(ability_id);
 
-DROP VIEW IF EXISTS race_vulnerabilities;
-CREATE VIEW race_vulnerabilities
-AS
-SELECT *
-FROM vulnerability JOIN damagetype USING(damage_type_id);
+-- DROP VIEW IF EXISTS race_vulnerabilities;
+-- CREATE VIEW race_vulnerabilities
+-- AS
+-- SELECT *
+-- FROM vulnerability JOIN damagetype USING(damage_type_id);
 
-DROP VIEW IF EXISTS race_resistances;
-CREATE VIEW race_resistances
-AS
-SELECT *
-FROM resistance JOIN damagetype USING(damage_type_id);
+-- DROP VIEW IF EXISTS race_resistances;
+-- CREATE VIEW race_resistances
+-- AS
+-- SELECT *
+-- FROM resistance JOIN damagetype USING(damage_type_id);
 
-DROP VIEW IF EXISTS class_spells;
-CREATE VIEW class_spells
-AS
-SELECT *
-FROM classlearnablespell JOIN spell USING(spell_id);
+-- DROP VIEW IF EXISTS class_spells;
+-- CREATE VIEW class_spells
+-- AS
+-- SELECT *
+-- FROM classlearnablespell JOIN spell USING(spell_id);
 
-DROP VIEW IF EXISTS spell_components;
-CREATE VIEW spell_components
-AS
-SELECT *
-FROM spellcomponent JOIN item USING(item_id);
+-- DROP VIEW IF EXISTS spell_components;
+-- CREATE VIEW spell_components
+-- AS
+-- SELECT *
+-- FROM spellcomponent JOIN item USING(item_id);
 
-DROP VIEW IF EXISTS monster_abilities;
-CREATE VIEW monster_abilities
-AS
-SELECT *
-FROM monsterabilityscore JOIN ability USING(ability_id);
+-- DROP VIEW IF EXISTS monster_abilities;
+-- CREATE VIEW monster_abilities
+-- AS
+-- SELECT *
+-- FROM monsterabilityscore JOIN ability USING(ability_id);
 
-DROP VIEW IF EXISTS race_ability_modifiers;
-CREATE VIEW race_ability_modifiers
-AS
-SELECT *
-FROM raceabilityscoremodifier JOIN ability USING(ability_id);
+-- DROP VIEW IF EXISTS race_ability_modifiers;
+-- CREATE VIEW race_ability_modifiers
+-- AS
+-- SELECT *
+-- FROM raceabilityscoremodifier JOIN ability USING(ability_id);
 
 DROP TRIGGER IF EXISTS default_player_nickname;
 DELIMITER $$
@@ -99,15 +99,31 @@ BEGIN
 END $$
 DELIMITER ;
 
+# If don't ever use outside of the linked procedure, this can be deleted and
+# have its select just moved directly into the procedure that uses it
+DROP FUNCTION IF EXISTS get_select_for_foreign_key_columns_and_referenced_table_names;
+DELIMITER $$
+CREATE FUNCTION get_select_for_foreign_key_columns_and_referenced_table_names(entity VARCHAR(255))
+RETURNS TEXT
+DETERMINISTIC
+BEGIN
+	RETURN CONCAT("SELECT column_name, referenced_table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema = 'csuciklo_dndb' AND table_name = '", entity, "' AND referenced_table_name IS NOT NULL");
+END $$
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS get_foreign_key_column_names_and_referenced_table_names;
 DELIMITER $$
 CREATE PROCEDURE get_foreign_key_column_names_and_referenced_table_names(IN entity VARCHAR(255))
 BEGIN
-	SELECT COLUMN_NAME, REFERENCED_TABLE_NAME
-	FROM INFORMATION_SCHEMA.key_column_usage
-	WHERE table_schema="csuciklo_dndb" 
-		  AND table_name = entity
-          AND REFERENCED_TABLE_NAME IS NOT NULL;
+-- 	SELECT COLUMN_NAME, REFERENCED_TABLE_NAME
+-- 	FROM INFORMATION_SCHEMA.key_column_usage
+-- 	WHERE table_schema="csuciklo_dndb" 
+-- 		  AND table_name = entity
+--           AND REFERENCED_TABLE_NAME IS NOT NULL;
+	SET @query = "";
+    SELECT get_select_for_foreign_key_columns_and_referenced_table_names(entity) INTO @query;
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
 END $$
 DELIMITER ;
 
@@ -587,3 +603,187 @@ BEGIN
 	EXECUTE stmt;
 END $$
 DELIMITER ;
+
+DROP FUNCTION IF EXISTS get_select_stmt_for_all_associated_table_and_fkcol_names;
+DELIMITER $$
+CREATE FUNCTION get_select_stmt_for_all_associated_table_and_fkcol_names(in_table VARCHAR(255))
+RETURNS TEXT
+DETERMINISTIC
+BEGIN
+IF in_table = 'monsterparty'
+     THEN
+ 		RETURN CONCAT("SELECT key_cols.table_name as 'table_name', key_cols.table_name as 'referenced_table_name', cols.column_name as 'referenced_column_name' FROM INFORMATION_SCHEMA.key_column_usage as key_cols JOIN INFORMATION_SCHEMA.columns as cols USING(table_name) WHERE key_cols.table_schema = 'csuciklo_dndb' AND key_cols.referenced_table_name = '", in_table, "' AND column_key = 'PRI'");
+ 	ELSE
+		RETURN CONCAT("SELECT table_name, referenced_table_name, referenced_column_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_dndb' AND table_name IN (SELECT table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_dndb' AND referenced_table_name = '", in_table, "') AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_TABLE_NAME != '", in_table, "'");
+ 	END IF;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_all_associated_table_and_fkcol_names;
+DELIMITER $$
+CREATE PROCEDURE get_all_associated_table_and_fkcol_names(in_table VARCHAR(255))
+BEGIN
+	SET @query = "";
+	SELECT get_select_stmt_for_all_associated_table_and_fkcol_names(in_table) INTO @query;
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_associated_table_and_fkcol_names_using_condition;
+DELIMITER $$
+CREATE PROCEDURE get_associated_table_and_fkcol_names_using_condition(in_table VARCHAR(255), in_condition TEXT)
+BEGIN
+	DECLARE base_query TEXT DEFAULT "";
+ 	SELECT get_select_stmt_for_all_associated_table_and_fkcol_names(in_table) INTO base_query;   
+	SET @query = CONCAT(base_query, " ", in_condition);
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_associated_table_and_fkcol_names_for_create;
+DELIMITER $$
+CREATE PROCEDURE get_associated_table_and_fkcol_names_for_create(in_table VARCHAR(255))
+BEGIN
+	DECLARE select_condition TEXT DEFAULT "";
+    IF in_table = 'campaign'
+    THEN
+		SET select_condition = "AND table_name != 'dungeonmaster' AND table_name != 'monsterparty' AND table_name != 'monster'";
+	ELSEIF in_table = 'class'
+    THEN
+		SET select_condition = "AND table_name != 'levelallocation'";
+	ELSEIF in_table = 'item'
+    THEN
+		SET select_condition = "AND table_name != 'monsterlootitem' AND table_name != 'characterinventoryitem' AND table_name != 'weapon'";
+	ELSEIF in_table = 'language'
+    THEN
+		SET select_condition = "AND table_name != 'characterlearnedlanguage'";
+	ELSEIF in_table = 'monster'
+    THEN
+		SET select_condition = "AND table_name != 'monsterencounter'";
+    ELSEIF in_table = 'race'
+    THEN 
+		SET select_condition = "AND table_name != 'character'";
+	ELSEIF in_table = 'spell'
+    THEN
+		SET select_condition = "AND table_name != 'learnedspell'";
+	END IF;
+    CALL get_associated_table_and_fkcol_names_using_condition(in_table, select_condition);
+END $$
+DELIMITER ;
+
+DROP FUNCTION IF EXISTS character_owned_by_player;
+DELIMITER $$
+CREATE FUNCTION character_owned_by_player(in_char_id INT(10), in_player_id INT(10))
+RETURNS BOOLEAN
+DETERMINISTIC
+BEGIN
+	IF in_char_id IS NULL
+    THEN
+		RETURN TRUE;
+	ELSE
+		RETURN (SELECT count(*) > 0 FROM `character` WHERE char_id = in_char_id AND player_id = in_player_id);
+	END IF;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS insert_record;
+DELIMITER $$
+CREATE PROCEDURE insert_record(in_table VARCHAR(255), in_col_list TEXT, in_values TEXT)
+BEGIN
+	DECLARE usable_tbl_name VARCHAR(255) DEFAULT "";
+    DECLARE in_col_addition VARCHAR(255) DEFAULT "";
+    
+	IF in_table = "character" OR in_table = "language"
+	THEN
+		SELECT CONCAT("`", in_table, "`") INTO usable_tbl_name;
+	ELSE
+		SELECT in_table INTO usable_tbl_name;
+    END IF;
+    IF in_table = "characterabilityscore"
+    THEN
+		SET in_col_addition = ",charabilityscore_value";
+	END IF;
+    
+    SET @query = CONCAT("INSERT INTO ", usable_tbl_name, "(", in_col_list, in_col_addition, ") VALUES(", in_values, ")");
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+END $$
+DELIMITER ;
+
+# Saved for potential future use, but if don't add anything then we can delete it
+DROP PROCEDURE IF EXISTS get_most_recent_pk_val_and_pk_colname;
+DELIMITER $$
+CREATE PROCEDURE get_most_recent_pk_val_and_pk_colname(in_table VARCHAR(255))
+BEGIN
+	DECLARE pk_name VARCHAR(255) DEFAULT "";
+    DECLARE usable_tbl_name VARCHAR(255) DEFAULT "";
+    
+    IF in_table = "character" OR in_table = "language"
+    THEN
+		SET usable_tbl_name = CONCAT("`", in_table, "`");
+	ELSE
+		SELECT in_table INTO usable_tbl_name;
+	END IF;
+        
+    SELECT get_primary_key_name_from_table_name(in_table) INTO pk_name;
+    
+    SET @query = CONCAT("SELECT IFNULL(MAX(", pk_name, "), 0), '", pk_name, "' FROM ", usable_tbl_name, "");
+	PREPARE stmt FROM @query;
+	EXECUTE stmt;
+END $$
+DELIMITER ;
+
+-- DROP PROCEDURE IF EXISTS get_most_recent_uncommitted_pk_val_and_pk_colname;
+-- DELIMITER $$
+-- CREATE PROCEDURE get_most_recent_uncommitted_pk_val_and_pk_colname(in_table VARCHAR(255))
+-- BEGIN
+-- 	DECLARE pk_name VARCHAR(255) DEFAULT "";
+--     DECLARE usable_tbl_name VARCHAR(255) DEFAULT "";
+--     
+--     IF in_table = "character" OR in_table = "language"
+--     THEN
+-- 		SET usable_tbl_name = CONCAT("`", in_table, "`");
+-- 	ELSE
+-- 		SELECT in_table INTO usable_tbl_name;
+-- 	END IF;
+--         
+--     SELECT get_primary_key_name_from_table_name(in_table) INTO pk_name;
+--     SET @query = CONCAT("SELECT IFNULL(MAX(", pk_name, "), 0) + 1, '", pk_name, "' FROM ", usable_tbl_name, "");
+-- 	PREPARE stmt FROM @query;
+-- 	EXECUTE stmt;
+-- END $$
+-- DELIMITER ;
+
+# TODO: TEST!
+DROP TRIGGER IF EXISTS characterinventoryitem_autoincrement;
+DELIMITER $$
+CREATE TRIGGER characterinventoryitem_autoincrement
+BEFORE
+INSERT ON characterinventoryitem
+FOR EACH ROW
+BEGIN
+	SET NEW.characterinventoryitem_counter = ( SELECT IFNULL(MAX(characterinventoryitem_counter), 0) + 1
+											   FROM characterinventoryitem
+                                               WHERE char_id = NEW.char_id AND item_id = NEW.item_id
+											 );
+END $$
+DELIMITER ;
+
+# TODO: TEST!
+DROP TRIGGER IF EXISTS monsterlootitem_autoincrement;
+DELIMITER $$
+CREATE TRIGGER monsterlootitem_autoincrement
+BEFORE
+INSERT ON monsterlootitem
+FOR EACH ROW
+BEGIN
+	SET NEW.monsterlootitem_counter = ( SELECT IFNULL(MAX(monsterlootitem_counter), 0) + 1
+											   FROM monsterlootitem
+                                               WHERE encounter_id = NEW.encounter_id AND item_id = NEW.item_id
+											 );
+END $$
+DELIMITER ;
+
+# HOW ABOUT NOT... -> 5/3 TODO: get_associated_..._for_update => as w/monsterparty, do edit for campaign that brings in monsterparties
