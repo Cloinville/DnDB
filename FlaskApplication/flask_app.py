@@ -13,7 +13,7 @@ logged_in_user_details = {'username': None, 'nickname': None, 'player_id': None,
 # logged_in_user = None
 # logged_in_user_nickname = ""
 default_dropdown_str = ""
-searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item']
+searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill']
 # creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
 creatable_entities = ['character', 'campaign', 'monsterparty']
 
@@ -320,17 +320,21 @@ def create_details(entity):
                 multi_level_parent_with_children.append([multi_level_curr_parent, multi_level_curr_children_list])
                 multi_level_curr_children_list = []
             
-            insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values, single_level_associations, multi_level_parent_with_children)
+            new_id, error = insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values, single_level_associations, multi_level_parent_with_children)
+            if error == None:
+                return redirect(url_for('entity_details', entity=chosen_entity, entity_id = new_id))
+            else:
+                # do error handling
+                error = True
 
     chosen_entity = entity
 
-    include_text_attrs = True
-    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs)
+    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity)
 
     include_creator_id = False
     fk_set_list = get_fk_set_list(chosen_entity, include_creator_id)
 
-    direct_attr_list, multilinked_attr_list = get_dynamic_associative_attr_lists(chosen_entity, True)
+    direct_attr_list, multilinked_attr_list = get_dynamic_associative_attr_lists_for_create(chosen_entity, True)
 
     # 1. Get all fields directly in the record of that entity
     # 2. Get all foreign fields
@@ -365,12 +369,9 @@ def search():
 def search_fields_template(name):
     chosen_entity = name
 
-    # TODO: this is currently kind of arbitrary. Remove?      
-    include_text_attrs = False
-
     include_creator_id = True
 
-    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs)
+    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity)
 
     fk_set_list = get_fk_set_list(chosen_entity, include_creator_id)
 
@@ -437,26 +438,20 @@ def search_result():
 
 
 #TODO: stub
-@app.route('/entity_details', methods=['GET', 'POST'])
-def entity_details():
+@app.route('/entity_details/<entity>/<entity_id>', methods=['GET', 'POST'])
+def entity_details(entity, entity_id):
     if logged_in_user_details['username'] == None:
         return redirect('/login')
 
-    if request.method == 'POST':
-        post_key = ""
-        post_value = ""
+    chosen_entity = entity
 
-        # DEBUGGING
-        for key in request.form:
-            if key.endswith("_btn"):
-                post_key = key
-                post_value = request.form[key]
-                print("YUP: {0}, {1} -> need to strip off _btn from end to get chosen_entity".format(post_key, post_value))
-            else:
-                print("nope: {0}, {1}".format(key, request.form[key]))
-        # END DEBUGGING
+    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, entity_id)
 
-    return render_template('entity_details.html', logged_in_user_details=logged_in_user_details)
+    # TODO: get for associative attributes that already exist in table
+
+    direct_attr_list_template, multilinked_attr_list_template = get_dynamic_associative_attr_lists_for_create(chosen_entity, True)
+
+    return render_template('entity_details.html', chosen_entity = chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, direct_attr_list=direct_attr_list_template, multilinked_attr_list=multilinked_attr_list_template, logged_in_user_details=logged_in_user_details)
 
 
 def connect(in_user=None):
@@ -519,7 +514,7 @@ def password_invalid(password):
     return re.search(r'[^a-zA-Z0-9_]', password)
 
 
-def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs):
+def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs=True):
     attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}')".format(chosen_entity))
 
     # List format: [(name, datatype), (name, datatype), ...]
@@ -546,45 +541,108 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs):
     return alphanumeric_attr_list, enum_attr_list
 
 
-def get_fk_set_list(chosen_entity, include_creator):
-    foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
+# TODO - combine this with above function once figure out clean way to do so
+def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, id_val, include_text_attrs=True):
+    # TODO: modify DB end so not need to include "_details" in this call, but auto selects from details panel instead? => ISSUE: lose foreign key info...
+    attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}_details')".format(chosen_entity))
+
+    values_with_readonly_information = execute_cmd_and_get_result("CALL get_direct_entity_details('{0}', '{1}', '{2}')".format(chosen_entity, id_val, logged_in_user_details['player_id']))
     
-    # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
-    fk_set_list = []
+    # DEBUGGING
+    print("attr_datatype_list w/READONLY INFO: {0}".format(attr_datatype_list))
+    print("VALUES w/READONLY INFO: {0}".format(values_with_readonly_information))
+    # END DEBUGGING
 
-    # For each foreign table that the base table references (given as pair: foreign key col name in base table, referenced table name)
-    for pair in foreign_key_names_and_tables:
-        local_fk_name = pair[0]
-        referenced_table = pair[1]
+    # TODO: check this
+    if len(values_with_readonly_information) <= 1:
+        # DEBUGGING
+        print("UH - OH: TERMINATED VALUE COLLECTION PREMATURELY")
+        # END DEBUGGING
+        return None, None
+    
+    readonly_info, values = values_with_readonly_information
 
-        # TODO 5/3: check that addition at end of line didn't break functionality
-        is_creator_reference = (local_fk_name.lower() == "player_id" and chosen_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and chosen_entity == 'monsterencounter')
+    # List format: [(name, datatype, readonly, value), (name, datatype, readonly, value), ...]
+    alphanumeric_attr_list = []
 
-        if include_creator or not is_creator_reference:
-            # Get the display and identification information for all records in that table
-            referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
+    # List format: [(name, (allowed_val, allowed_val,...), readonly, value), (name, (allowed_val, allowed_val, ...), readonly, value)]
+    enum_attr_list = []
+
+    # Parse through all local attributes received, distinguishing enums from all other types
+    # do range truncation to be safe, but shouldn't be possible to get mismatch
+    for i in range(0, min(min(len(attr_datatype_list), len(values)), len(readonly_info))):
+    # for attr_set in attr_datatype_list:
+        attr_name = attr_datatype_list[i][0]
+        attr_datatype = attr_datatype_list[i][1]
+        attr_readonly = readonly_info[i]
+        attr_value = values[i]
+
+        # If an enum, convert all of the allowed values into a list, and associate list w/attr name
+        if "enum" in attr_datatype:
+            enum_vals = [enum_val[1:-1] if enum_val[0] == "'" and enum_val[len(enum_val) - 1] == "'" else enum_val for enum_val in attr_datatype.split("enum")[1][1:-1].split(",")]
+            # enum_vals.insert(0, default_dropdown_str)
+            if attr_readonly.lower() == "no":
+                attr_readonly = "disabled"
+            enum_attr_list.append([attr_name, enum_vals, attr_readonly, attr_value])
+        else:
+            if "text" not in attr_datatype or include_text_attrs:
+                attr_datatype_html_pattern, attr_datatype_html_length = convert_mysql_datatype_to_html_datatype(attr_datatype)
+                if attr_readonly.lower() == "no":
+                    attr_readonly = "readonly"
+                alphanumeric_attr_list.append([attr_name, attr_datatype_html_pattern, attr_datatype_html_length, attr_readonly, attr_value])
+
+    # DEBUGGING
+    print("ALPHANUM ATTR LIST: {0}".format(alphanumeric_attr_list))
+    print("ENUM ATTR LIST: {0}".format(enum_attr_list))
+    # END DEBUGGING
+
+    return alphanumeric_attr_list, enum_attr_list
+
+
+# def get_fk_set_list(chosen_entity, include_creator):
+#     foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
+    
+#     # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
+#     fk_set_list = []
+
+#     # For each foreign table that the base table references (given as pair: foreign key col name in base table, referenced table name)
+#     for pair in foreign_key_names_and_tables:
+#         local_fk_name = pair[0]
+#         referenced_table = pair[1]
+
+#         # TODO 5/3: check that addition at end of line didn't break functionality
+#         is_creator_reference = (local_fk_name.lower() == "player_id" and chosen_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and chosen_entity == 'monsterencounter')
+
+#         if include_creator or not is_creator_reference:
+#             # Get the display and identification information for all records in that table
+#             referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
         
-            # If there were records in the table
-            if len(referenced_table_record_names_and_metadata) > 0:
+#             # If there were records in the table
+#             if len(referenced_table_record_names_and_metadata) > 0:
 
-                # Save the name of the fk column for use in searching later
-                foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
+#                 # Save the name of the fk column for use in searching later
+#                 foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
 
-                # Insert a dummy entry, to have a "no selection" option for dropdowns
-                referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
+#                 # Insert a dummy entry, to have a "no selection" option for dropdowns
+#                 referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
             
-                # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
-                fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+#                 # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
+#                 fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
             
-                # DEBUGGING
-                # print([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
-                # END DEBUGGING
+#                 # DEBUGGING
+#                 # print([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
+#                 # END DEBUGGING
 
-    return fk_set_list
+#     return fk_set_list
 
 
-def get_fk_set_list_for_linked_entity(base_entity, associative_entity, add_defaults, include_creator):
-    foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(associative_entity))
+# TODO: possibly combine this into meatier version of function above
+def get_fk_set_list(base_entity, include_creator, associative_entity=None, add_defaults=True):
+    foreign_key_names_and_tables = None
+    if associative_entity != None:
+        foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(associative_entity))
+    else:
+        foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(base_entity))
     
     # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
     fk_set_list = []
@@ -595,7 +653,12 @@ def get_fk_set_list_for_linked_entity(base_entity, associative_entity, add_defau
         referenced_table = pair[1]
 
         # TODO 5/3: check that addition at end of line didn't break functionality
-        is_creator_reference = (referenced_table == base_entity) or (local_fk_name.lower() == "player_id" and base_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and base_entity == 'monsterencounter')
+        is_creator_reference = False
+        if associative_entity != None:
+            is_creator_reference = (referenced_table == base_entity) or (local_fk_name.lower() == "player_id" and base_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and base_entity == 'monsterencounter')
+        else:
+            is_creator_reference = (local_fk_name.lower() == "player_id" and base_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and base_entity == 'monsterencounter')
+
 
         if include_creator or not is_creator_reference:
             # Get the display and identification information for all records in that table
@@ -622,7 +685,7 @@ def get_fk_set_list_for_linked_entity(base_entity, associative_entity, add_defau
 
 
 # This function is a complete nightmare
-def get_dynamic_associative_attr_lists(entity, allow_recursion):
+def get_dynamic_associative_attr_lists_for_create(entity, allow_recursion):
     
     # TODO 5/1: determine which associative tables to include, and add fields for those
     #           a. Need to distinguish between those w/set number, and those that are dynamic
@@ -634,12 +697,6 @@ def get_dynamic_associative_attr_lists(entity, allow_recursion):
     # [[table to insert into, linked_table_name, [(displayvals), (displayvals), ...]], [table to insert into for other table to insert into, linked_table_name, [(displayvals), (displayvals), ...]],...)
     multilinked_dynamic_attr_list = []
 
-    # if entity == "character":
-    #     # associative fields:
-    #     #   1. 6 ability scores as integer values
-    #     #   2. dynamic number of inventory items
-    #     #   3. dynamic number of learned languages
-    #     #   ** spell and level allocation will be delayed until Character Edit Level Up screen
     for trio in associated_table_names_and_fkcol_names:
         linking_table = trio[0]
         associated_table = trio[1]
@@ -650,18 +707,18 @@ def get_dynamic_associative_attr_lists(entity, allow_recursion):
         # if dynamic, save info
 
         # only character class delays some of its returned associated creations
-        if entity == 'character':
+        if entity == 'character' or entity == 'monster':
             if associated_table == "ability":
                 # static => collect all values and make into input text fields
                 # 1. get all unique instances w/display name
                 # 2. get datatype
                 # 3. append: (associative_table_name, associated_table_name, [(associated_table_fk_name, associated_fk_val, associated_display_name)])
-                attr_vals = get_fk_set_list_for_linked_entity(entity, linking_table, False, False)
+                attr_vals = get_fk_set_list(entity, False, linking_table, False)
                 attr_vals_and_table_data = ["static", linking_table, attr_vals]
                 dynamic_attr_list.append(attr_vals_and_table_data)
 
             elif associated_table == "language":
-                attr_vals = get_fk_set_list_for_linked_entity(entity, linking_table, False, False)
+                attr_vals = get_fk_set_list(entity, False, linking_table, False)
                 attr_vals_and_table_data = ["dynamic", linking_table, attr_vals]
                 dynamic_attr_list.append(attr_vals_and_table_data)
 
@@ -669,12 +726,12 @@ def get_dynamic_associative_attr_lists(entity, allow_recursion):
             # ([monsterencounter, monster, (monster vals)], [lootitem, item, (item vals)])
             if associated_table == 'monsterencounter':
                 print("\n\nAS INTENDED: link = {0}".format(linking_table))
-                direct_fk_set_list = get_fk_set_list_for_linked_entity(entity, linking_table, False, False)
+                direct_fk_set_list = get_fk_set_list(entity, False, linking_table, False)
 
                 # direct_attr_vals_and_table_data = ["dynamic", linking_table, direct_fk_set_list]
                 
                 if allow_recursion:
-                    indirect_dynamic_attrs, indirect_multi_attrs = get_dynamic_associative_attr_lists(associated_table, False)
+                    indirect_dynamic_attrs, indirect_multi_attrs = get_dynamic_associative_attr_lists_for_create(associated_table, False)
                     # big yikes
 
                     # indirect_attr_vals_and_table_data = indirect_dynamic_attrs
@@ -690,7 +747,7 @@ def get_dynamic_associative_attr_lists(entity, allow_recursion):
                     dynamic_attr_list.extend(["dynamic", linking_table, direct_fk_set_list])
         else:
             # aside from monsters with ability scores, no other entity has a static attr list
-            attr_vals = get_fk_set_list_for_linked_entity(entity, linking_table, False, False)
+            attr_vals = get_fk_set_list(entity, False, linking_table, False)
             attr_vals_and_table_data = ["dynamic", linking_table, attr_vals]
             dynamic_attr_list.append(attr_vals_and_table_data)
 
@@ -851,14 +908,14 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
         db.commit()
         cursor.close()
         db.close()
-        return True
+        return saved_base_pk_val, None
     except Exception as e:
         print("INSERT RECORD EXCEPTION - {0}".format(e))
         cursor.close()
         db.close()
         raise e
         # rollback?
-        return False, e
+        return None, e
 
 
 # TODO: replace every other instance of execute to get fetchall() with this

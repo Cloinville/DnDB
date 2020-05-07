@@ -31,6 +31,13 @@
                     </div>
                 </div>
         </header>
+        {% if logged_in_user_details['dm_id'] == None %}
+            {% set disabled_btn_text = "disabled" %}
+            {% set disabled_btn_title = "Upgrade to DnDB Premium to Unlock this Feature!" %}
+        {% else %}
+            {% set disabled_btn_text = "" %}
+            {% set disabled_btn_title = "" %}
+        {% endif %}
         <h1 class="page_title">Create</h1>
         <div class="create-grid-container">
             <div class="grid-item">
@@ -39,8 +46,8 @@
                 </form>
             </div>
             <div class="grid-item">
-                <form action="{{url_for('create_details', entity='campaign')}}"">
-                    <button>Campaign</button>
+                <form action="{{url_for('create_details', entity='campaign')}}">
+                    <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Campaign</button>
                 </form>
             </div>
             <!--
@@ -78,7 +85,7 @@
         -->
             <div class="grid-item">
                 <form action="{{url_for('create_details', entity='monsterparty')}}">
-                    <button>Battle Encounter</button>
+                    <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Battle Encounter</button>
                 </form>
             </div>
         </div>

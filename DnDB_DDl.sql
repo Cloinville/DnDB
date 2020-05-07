@@ -56,11 +56,6 @@ CREATE TABLE campaign(
     campaign_party_name VARCHAR(128) DEFAULT NULL
 )ENGINE=InnoDB;
 
-CREATE TABLE adventuringparty(
-	party_id INT(10) PRIMARY KEY AUTO_INCREMENT,
-    party_name VARCHAR(128) DEFAULT NULL
-)ENGINE=InnoDB;
-
 CREATE TABLE ability(
 	ability_id TINYINT PRIMARY KEY AUTO_INCREMENT,
     ability_name VARCHAR(12) DEFAULT NULL,

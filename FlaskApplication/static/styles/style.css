@@ -425,3 +425,19 @@ iframe{
 .innermost_table tr:nth-child(even){
     background-color:#eee;
 }
+
+button:disabled, button[disabled]{
+    background-color: #bbb;
+    cursor: not-allowed;
+}
+
+button[disabled]:hover{
+    background-color: #bbb;
+    color: #fff;
+    cursor:not-allowed;
+}
+
+input[readonly]{
+    background-color: #478547;
+    border: none;
+}
