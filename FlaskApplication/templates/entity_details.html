@@ -31,26 +31,6 @@
                 </div>
             </div>
         </header>
-        <h1 class="page_title">Search</h1>
-        <form action="" method="POST">
-            <label for="entity">Choose an entity: </label>
-            <select id="entities" name="chosen_entity">
-                {% for entity in entities %}
-                    {% if entity == chosen_entity %}
-                        <option name="entity" value="{{entity}}" selected>{{entity}}</option>
-                    {% else %}
-                        <option name="entity" value="{{entity}}">{{entity}}</option>
-                    {% endif %}
-                {% endfor %}
-            </select>
-            <input type=submit value="Select Entity">
-        </form>
-        {% if search_fields_link != None %}
-        <iframe src={{search_fields_link}}
-                name="search_template"
-                height="50%"
-                width="100%">
-        </iframe>
-        {% endif %}
+        <h1 class="page_title">Details</h1>
     </body>
 </html>

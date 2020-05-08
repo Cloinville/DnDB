@@ -31,26 +31,37 @@
                 </div>
             </div>
         </header>
-        <h1 class="page_title">Search</h1>
-        <form action="" method="POST">
-            <label for="entity">Choose an entity: </label>
-            <select id="entities" name="chosen_entity">
-                {% for entity in entities %}
-                    {% if entity == chosen_entity %}
-                        <option name="entity" value="{{entity}}" selected>{{entity}}</option>
-                    {% else %}
-                        <option name="entity" value="{{entity}}">{{entity}}</option>
-                    {% endif %}
-                {% endfor %}
-            </select>
-            <input type=submit value="Select Entity">
+        <h1 class="page_title">My Profile</h1>
+        <!--{% if error %}-->
+                <div class="hidden"> <p class="error" style="color:#df2020; font-size:12px;margin-bottom:10px;"><strong>Error: </strong> {{error}}</p></div>
+        <!--{% endif %}-->
+        <form method="POST" action="" autocomplete="off">
+            <table>
+                <tr>
+                    <td>
+                        <label for="username">Username: </label>
+                    </td>
+                    <td>
+                        <input type="text" id="username" name="username" value="{{logged_in_user_details['username']}}" readonly>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <label for="nickname">Nickname: </label>
+                    </td>
+                    <td>
+                        <input type="text" id="nickname" name="nickname" placeholder="{{logged_in_user_details['nickname']}}">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <input type="submit" name="submit_btn" value="Update">
+                    </td>
+                    <td>
+                        <input type="submit" name="submit_btn" value="Revert">
+                    </td>
+                </tr>
+            </table>
         </form>
-        {% if search_fields_link != None %}
-        <iframe src={{search_fields_link}}
-                name="search_template"
-                height="50%"
-                width="100%">
-        </iframe>
-        {% endif %}
     </body>
 </html>

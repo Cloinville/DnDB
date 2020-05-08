@@ -128,7 +128,7 @@ CREATE TABLE item(
     item_description TEXT DEFAULT NULL,
     item_rarity ENUM(
 						"common", "uncommon", "rare", "very rare", "legendary"
-					)NOT NULL DEFAULT "common",
+					) NOT NULL DEFAULT "common",
     item_type ENUM(
 					"armor", "weapon", "potion", "ring", "rod", "scroll", "staff",
 					"wand", "wondrous item", "equipment", "shiled", "ammunition",
