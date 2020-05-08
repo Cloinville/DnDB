@@ -327,3 +327,4 @@ ALTER TABLE classlearnablespell ADD CONSTRAINT `cls_fk_class_id` FOREIGN KEY(cla
 ALTER TABLE classlearnablespell ADD CONSTRAINT `cls_fk_spell_id` FOREIGN KEY(spell_id) REFERENCES spell(spell_id);
 ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_campaign_id` FOREIGN KEY(campaign_id) REFERENCES campaign(campaign_id);
 ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
+ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);

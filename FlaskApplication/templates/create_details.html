@@ -77,15 +77,9 @@
             {% if direct_attr_list != None %}
                 {% for direct_attr_set in direct_attr_list %}
                     <!-- <p> DIRECT ATTRE SET: {{direct_attr_set}} </p> -->
-                    {% if direct_attr_set[0] == "static" %}
+                    {% if direct_attr_set[0] == "static-list" or direct_attr_set[0] == "static-dropdown" %}
                         {% for option_fk_set in direct_attr_set[2] %}
-                            {% set associative_prefix = "static_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
-                            <!-- <p> STATIC ELEM: {{option_fk_set}}</p> -->
-                            <!-- <input type="text" name="insert_for_{{direct_attr_set[1]}}" value="{{option_fk_set[1]}}" style="display:none"/> -->
-
-                            <!--<input type="text" name="{{associative_prefix}}" value="{{option_fk_set[1]}}" style="display:none"/>-->
-                            
-                            <!--<p> DEBUGGING STATIC DIRECT {{associative_prefix}} // name="insert_for_{{direct_attr_set[1]}}" value="{{option_fk_set[1]}}" </p>-->
+                            {% set associative_prefix = direct_attr_set[0] ~ "_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
                             <tr>
                                 <td>
                                     <label for={{option_fk_set[0]}}>{{option_fk_set[0]}} Values: </label>
@@ -93,6 +87,7 @@
                                 <td>
                                     <table class="inner_table">
                                         <tr>
+                                            {% if direct_attr_set[0] == "static-list" %}
                                             {% for option in option_fk_set[2] %}
                                             <td>
                                                 {{option[0]}} :
@@ -103,6 +98,18 @@
                                             </td>
                                         </tr>
                                         {% endfor %}
+                                        {% else %}
+                                        <td>
+
+                                        </td>
+                                        <td>
+                                            <select name="{{associative_prefix}}">
+                                            {% for option in option_fk_set[2] %}
+                                            <option value="{{associative_prefix}}={{option[2]}}">{{option[0]}}</option>
+                                            {% endfor %}
+                                            </select>
+                                        </td>
+                                        {% endif %}
                                     </table>
                                 </td>
                             </tr>

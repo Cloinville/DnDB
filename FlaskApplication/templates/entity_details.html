@@ -36,43 +36,87 @@
             <!-- Input below is a hidden field used to pass the chosen_entity value to the search_result page -->
             <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
             <table>
-            {% for alphanumeric_attr_with_datatype in alphanumeric_attr_list %}
-            <tr>
-                <td>
-                    {{alphanumeric_attr_with_datatype[0]}} : 
-                </td>
-                <td>
-                    <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
-                </td>
-            </tr>
+            {% for record in alphanumeric_attr_list %}
+                {% for alphanumeric_attr_with_datatype in record %}
+                <tr>
+                    <td>
+                        {{alphanumeric_attr_with_datatype[0]}} : 
+                    </td>
+                    <td>
+                        <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
+                        {% if alphanumeric_attr_with_datatype[3] != "readonly" %}
+                        <input type="submit" name="updatebtn_{{alphanumeric_attr_with_datatype[0]}}" value="&#x1F5F8;">
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
             {% endfor %}
-            {% for enum_attr in enum_attr_list %}
-            <tr>
-                <td>
-                    <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
-                </td>
-                <td>
-                    <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
-                        {% for enum_val in enum_attr[1] %}
-                            {% if enum_val == enum_attr[3] %}
-                                <option value="{{enum_val}}" selected>{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
-                            {% else %}
-                                <option value="{{enum_val}}">{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                </td>
-            </tr>
+            {% for record in enum_attr_list %}
+                {% for enum_attr in record %}
+                <tr>
+                    <td>
+                        <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                    </td>
+                    <td>
+                        <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
+                            {% for enum_val in enum_attr[1] %}
+                                {% if enum_val == enum_attr[3] %}
+                                    <option value="{{enum_val}}" selected>{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                                {% else %}
+                                    <option value="{{enum_val}}">{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
             {% endfor %}
 
             <!-- FK list traversal removed from here -->
 
             {% if direct_attr_list != None %}
                 {% for direct_attr_set in direct_attr_list %}
-                    <!-- <p> DIRECT ATTRE SET: {{direct_attr_set}} </p> -->
-                    {% if direct_attr_set[0] == "static" %}
-                        {% for option_fk_set in direct_attr_set[2] %}
-                            {% set associative_prefix = "static_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
+                    {% set associative_alphanumeric_vals_and_info = direct_attr_set[0] %}
+                    {% set associative_enum_vals_and_info = direct_attr_set[1] %}
+                    {% set associative_dynamic_additions_generation_info = direct_attr_set[2] %}
+
+                    {% for record in associative_alphanumeric_vals_and_info %}
+                        {% for alphanumeric_attr_with_datatype in record %}
+                        <tr>
+                            <td>
+                                {{alphanumeric_attr_with_datatype[0]}} : 
+                            </td>
+                            <td>
+                                <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for record in associative_enum_vals_and_info %}
+                        {% for enum_attr in record %}
+                        <tr>
+                            <td>
+                                <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                            </td>
+                            <td>
+                                <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
+                                    {% for enum_val in enum_attr[1] %}
+                                        {% if enum_val == enum_attr[3] %}
+                                            <option value="{{enum_val}}" selected>{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                                        {% else %}
+                                            <option value="{{enum_val}}">{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+
+                    <!-- <p> DIRECT ATTR SET: {{direct_attr_set}} </p> -->
+                    {% if associative_dynamic_additions_generation_info[0] == "static" %}
+                        {% for option_fk_set in associative_dynamic_additions_generation_info[2] %}
+                            {% set associative_prefix = "static_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
                             <!-- <p> STATIC ELEM: {{option_fk_set}}</p> -->
                             <!-- <input type="text" name="insert_for_{{direct_attr_set[1]}}" value="{{option_fk_set[1]}}" style="display:none"/> -->
 
@@ -101,8 +145,8 @@
                             </tr>
                         {% endfor %}
                     {% else %}
-                        {% for option in direct_attr_set[2] %}
-                            {% set associative_prefix = "dynamic_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option[1] %}
+                        {% for option in associative_dynamic_additions_generation_info[2] %}
+                            {% set associative_prefix = "dynamic_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ option[1] %}
                             <tr>
                                 <td>
                                     <!-- <p> DEBUGGING DYNAMIC DIRECT {{associative_prefix}} // name="insert_for_{{direct_attr_set[1]}}" value="{{option[1]}}" </p> -->
@@ -136,11 +180,48 @@
             <table>
             {% if multilinked_attr_list != None %}
                 {% for multilinked_attr_set in multilinked_attr_list %}
-                    {% set curr_multilinked_attr_metadata = multilinked_attr_set[2] %}
+                    {% set associative_alphanumeric_vals_and_info = multilinked_attr_set[0] %}
+                    {% set associative_enum_vals_and_info = multilinked_attr_set[1] %}
+                    {% set associative_dynamic_additions_generation_info = multilinked_attr_set[2] %}
+
+                    {% for record in associative_alphanumeric_vals_and_info %}
+                        {% for alphanumeric_attr_with_datatype in record %}
+                        <tr>
+                            <td>
+                                {{alphanumeric_attr_with_datatype[0]}} : 
+                            </td>
+                            <td>
+                                <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for record in associative_enum_vals_and_info %}
+                        {% for enum_attr in record %}
+                        <tr>
+                            <td>
+                                <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                            </td>
+                            <td>
+                                <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
+                                    {% for enum_val in enum_attr[1] %}
+                                        {% if enum_val == enum_attr[3] %}
+                                            <option value="{{enum_val}}" selected>{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                                        {% else %}
+                                            <option value="{{enum_val}}">{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+
+                    {% set curr_multilinked_attr_metadata = associative_dynamic_additions_generation_info[2] %}
                     {% set curr_base_multilink_attr_metadata = curr_multilinked_attr_metadata[0] %}
                     {% set curr_associated_lists = curr_multilinked_attr_metadata[1] %}
 
-                    {% set multi_base_associative_prefix = "multibase_" ~ multilinked_attr_set[1] ~ "_insertassociativefor_" ~ curr_base_multilink_attr_metadata[1] %}
+                    {% set multi_base_associative_prefix = "multibase_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ curr_base_multilink_attr_metadata[1] %}
                     <!-- <p> BASE ASSOCIATIVE: {{multi_base_associative_prefix}} // </p> -->
                         <tr>
                             <input type="text" id="{{multi_base_associative_prefix}}_field_type" name="{{multi_base_associative_prefix}}_field_type" value="multi" style="display:none">
@@ -169,6 +250,7 @@
                             </td>
                         </tr>
                         {% for associated_attr_list in curr_associated_lists %}
+                            <!-- TODO 5/7: enum and alphanum lists for inner multilinked... -->
                             {% for dropdown_metadata_and_fk_vals in associated_attr_list[2] %}
                             {% set child_associative_prefix = "multichild_" ~ associated_attr_list[1] ~ "_insertassociativefor_" ~ dropdown_metadata_and_fk_vals[1] %}
                             <!-- <p> CHILD ASSOCIATIVE: {{child_associative_prefix}} </p> -->
