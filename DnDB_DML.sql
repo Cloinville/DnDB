@@ -653,7 +653,7 @@ DELIMITER $$
 CREATE PROCEDURE update_field_in_table(in_table VARCHAR(255), in_field VARCHAR(255), new_value VARCHAR(255), in_condition TEXT)
 BEGIN
 	DECLARE formatted_in_table VARCHAR(255) DEFAULT "";
-    DECLARE id_name VARCHAR(255) DEFAULT "";
+--     DECLARE id_name VARCHAR(255) DEFAULT "";
     
 --     IF in_table LIKE "%_details"
 --     THEN
@@ -725,7 +725,7 @@ BEGIN
 	DECLARE select_condition TEXT DEFAULT "";
     IF in_table = 'campaign'
     THEN
-		SET select_condition = "AND table_name != 'dungeonmaster' AND table_name != 'monsterparty' AND table_name != 'monster'";
+		SET select_condition = "AND table_name != 'dungeonmaster' AND table_name != 'monsterparty' AND table_name != 'monster' AND referenced_table_name != 'character'";
 	ELSEIF in_table = 'character'
     THEN
 		SET select_condition = "AND referenced_table_name != 'player'";
@@ -1004,12 +1004,24 @@ BEGIN
         SELECT "NO", "NO"
         UNION ALL
 		SELECT * FROM monsterparty_details WHERE ID = primary_key_value;
-	ELSEIF entity = "partymember"
+-- 	ELSEIF entity = "partymember"
+--     THEN
+-- 		# 5/7 STUB
+--         SELECT "NO", "NO", "NO"
+--         UNION ALL
+--         SELECT * FROM partymember_details WHERE ID = primary_key_value;
+	ELSEIF entity = "player_partymember"
     THEN
 		# 5/7 STUB
         SELECT "NO", "NO", "NO"
         UNION ALL
-        SELECT * FROM partymember_details WHERE ID = primary_key_value;
+        SELECT * FROM player_partymember_details WHERE ID = primary_key_value;
+	ELSEIF entity = "character_partymember"
+    THEN
+		# 5/7 STUB
+        SELECT "NO", "NO"
+        UNION ALL
+        SELECT * FROM character_partymember_details WHERE ID = primary_key_value;
 	ELSEIF entity = "player"
     THEN
 		# 5/7 STUB
@@ -1205,13 +1217,21 @@ AS
     FROM monsterparty;
     
 # 5/7 STUB
-DROP VIEW IF EXISTS partymember_details;
-CREATE VIEW partymember_details
+DROP VIEW IF EXISTS player_partymember_details;
+CREATE VIEW player_partymember_details
 AS
     SELECT campaign_id as "ID",
 		   player_nickname as "Player Nickname",
            char_name as "Character Name"
     FROM partymember JOIN player USING(player_id) LEFT JOIN `character` USING(char_id);
+
+# 5/7 STUB
+DROP VIEW IF EXISTS character_partymember_details;
+CREATE VIEW character_partymember_details
+AS
+    SELECT char_id as "ID",
+           campaign_name as "Campaign Name"
+    FROM partymember JOIN campaign USING(campaign_id);
 
 # 5/7 STUB
 DROP VIEW IF EXISTS raceabilityscoremodifier_details;

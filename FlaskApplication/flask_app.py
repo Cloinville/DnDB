@@ -101,6 +101,7 @@ def signup():
     return render_template('signup.html', error=error)
 
 
+@app.route('/')
 @app.route('/index')
 def index():
     # if logged_in_user == None:
@@ -145,17 +146,11 @@ def profile():
             else:
                 update_player_nickname(nickname)
 
-    # username = logged_in_user
-    # nickname = logged_in_user_nickname
-    # username = logged_in_user_details['username']
-    # nickname = logged_in_user_details['nickname']
-
     return render_template('profile.html', error=error, logged_in_user_details=logged_in_user_details)
 
 
 @app.route('/premium', methods=['GET', 'POST'])
 def premium():
-    # if logged_in_user == None:
     if logged_in_user_details['username'] == None:
         return redirect('/login')
 
@@ -324,7 +319,7 @@ def create_details(entity):
             if error == None:
                 return redirect(url_for('entity_details', entity=chosen_entity, entity_id = new_id))
             else:
-                # do error handling
+                # TODO: do error handling
                 error = True
 
     chosen_entity = entity
@@ -415,25 +410,7 @@ def search_result():
         # columns = execute_cmd_and_get_result("CALL get_all_column_names('{0}')".format(chosen_entity))
 
         records_and_metadata = get_formatted_previews_and_metadata_list(results)
-        # records = []
-        # num_cols = len(columns)
 
-        # for result in results:
-        #     curr_col_and_val = []
-        #     end_index = min(len(result), num_cols)
-        #     for i in range(0, end_index):
-        #         curr_col_and_val.append([columns[i][0], result[i]])
-        #     records.append(curr_col_and_val)
-
-        # print("COLS AND VALS: ")
-        # for col_and_val in records:
-        #     print("1: {0}".format(col_and_val))
-
-        # if len(records) == 0:
-        #     records = None
-
-    # search_fields = session.pop('search_fields', [])
-    # return render_template('search_result', search_fields=search_fields)
     return render_template('search_result.html', records_and_metadata=records_and_metadata, logged_in_user_details=logged_in_user_details)
 
 
@@ -838,7 +815,14 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
         associated_table = trio[1]
         fk_in_associated_table = trio[2]
 
-        preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values = get_alphanumeric_and_enum_attr_lists_with_values_for_details(linking_table, entity_id)
+        preexisting_vals_calling_entity = linking_table
+        if linking_table == "partymember":
+            if entity == "campaign":
+                preexisting_vals_calling_entity = "player_partymember"
+            else:
+                preexisting_vals_calling_entity = "character_partymember"
+
+        preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values = get_alphanumeric_and_enum_attr_lists_with_values_for_details(preexisting_vals_calling_entity, entity_id)
 
         # only character class delays some of its returned associated creations
         if entity == 'character' or entity == 'monster':
@@ -847,6 +831,17 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
             if associated_table == "ability":
                 dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
             # 5/7 TODO: if associated_table == "partymember" AND there does not exist preexisting value, then do static-dropdown
+            elif associated_table == "campaign":
+                # DEBUGGING
+                print("GET ASSOCIATIVES FOR DETAILS: PREEXISTING: \n alphanum: \n {0} \n enum: \n {1}".format(preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values))
+                # END DEBUGGING
+                # 
+                if len(preexisting_alphanumeric_metadata_and_values) == 0:
+                    attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, True)
+                    attr_vals_and_metadata_for_dynamic_additions = ["static-dropdown", linking_table, attr_vals_for_dynamic_additions]
+                    dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                else:
+                    dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
             else:
             # # If ability, need to collect existing values ONLY, not template;
             # # for any other table, collect both existing values and template

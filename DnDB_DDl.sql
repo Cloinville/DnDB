@@ -188,14 +188,14 @@ CREATE TABLE characterlearnedlanguage(
 CREATE TABLE characterinventoryitem(
 	char_id INT(10),
     item_id INT(10),
-    characterinventoryitem_counter SMALLINT UNIQUE NOT NULL DEFAULT 0,
+    characterinventoryitem_counter SMALLINT NOT NULL DEFAULT 0,
     PRIMARY KEY(char_id, item_id, characterinventoryitem_counter)
 )ENGINE=InnoDB;
 
 CREATE TABLE monsterlootitem(
 	encounter_id INT(11),
     item_id INT(10),
-    monsterlootitem_counter SMALLINT UNIQUE NOT NULL DEFAULT 0,
+    monsterlootitem_counter SMALLINT NOT NULL DEFAULT 0,
     PRIMARY KEY(encounter_id, item_id, monsterlootitem_counter)	
 )ENGINE=InnoDB;
 
