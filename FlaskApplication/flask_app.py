@@ -436,13 +436,13 @@ def entity_details(entity, entity_id):
 
     chosen_entity = entity
 
-    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, entity_id)
+    alphanumeric_attr_list, enum_attr_list, all_attr_lists = get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, entity_id)
 
     # TODO: get for associative attributes that already exist in table
 
     direct_attr_list_values_and_templates, multilinked_attr_list_values_and_templates = get_associative_attr_lists_for_entity_details(chosen_entity, entity_id, True)
 
-    return render_template('entity_details.html', chosen_entity = chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, direct_attr_list=direct_attr_list_values_and_templates, multilinked_attr_list=multilinked_attr_list_values_and_templates, logged_in_user_details=logged_in_user_details)
+    return render_template('entity_details.html', chosen_entity = chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, all_attr_lists=all_attr_lists, direct_attr_list=direct_attr_list_values_and_templates, multilinked_attr_list=multilinked_attr_list_values_and_templates, logged_in_user_details=logged_in_user_details)
 
 
 def connect(in_user=None):
@@ -533,7 +533,7 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs=True)
 
 
 # TODO - combine this with above function once figure out clean way to do so
-def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, id_val, include_text_attrs=True):
+def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, id_val, prep_id_as_link=False, include_text_attrs=True):
     # TODO: modify DB end so not need to include "_details" in this call, but auto selects from details panel instead? => ISSUE: lose foreign key info...
     attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}_details')".format(chosen_entity))
 
@@ -550,7 +550,7 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
         print("UH - OH: TERMINATED VALUE COLLECTION PREMATURELY")
         # END DEBUGGING
         # TODO: maybe change the returns back to Nones
-        return [], []
+        return [], [], []
     
     readonly_info = values_with_readonly_information.pop(0)
     all_record_values = values_with_readonly_information
@@ -566,13 +566,32 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
     # List format: [ [(name, (allowed_val, allowed_val,...), readonly, value), (name, (allowed_val, allowed_val, ...), readonly, value)], [(name, (allowed_val, allowed_val,...), readonly, value), (name, (allowed_val, allowed_val, ...), readonly, value)], ...]
     all_records_enum_attr_list = []
 
+    all_records_values_and_attr_lists = []
+
     # Parse through all local attributes received, distinguishing enums from all other types
     # do range truncation to be safe, but shouldn't be possible to get mismatch
     for curr_record_values in all_record_values:
         alphanumeric_attr_list = []
         enum_attr_list = []
 
-        for i in range(0, min(min(len(attr_datatype_list), len(curr_record_values)), len(readonly_info))):
+        # DEBUGGING
+        print("GET ALPHA AND ENUM VALUES FOR DETAILS: CURR RECORD: {0}".format(curr_record_values))
+        # END DEBUGGING
+
+        min_end_index = min(min(len(attr_datatype_list), len(curr_record_values)), len(readonly_info))
+
+        link_info = []
+        # If reformat ID info as link, do so (guaranteed to be first entry in record); else, skip entirely
+        if prep_id_as_link:
+            # safety check
+            for i in range(0, min(min_end_index, 1)):
+                link_entity = chosen_entity
+                if chosen_entity == "monsterparty_monsterencounter":
+                    link_entity = "monsterencounter"
+
+                link_info = [link_entity, curr_record_values[i]]
+
+        for i in range(1, min_end_index):
         # for attr_set in attr_datatype_list:
             attr_name = attr_datatype_list[i][0]
             attr_datatype = attr_datatype_list[i][1]
@@ -580,6 +599,7 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
             attr_value = curr_record_values[i]
 
             # If an enum, convert all of the allowed values into a list, and associate list w/attr name
+            # TODO: check this, since seems like wouldn't work with current setup?? Since aren't combining the two
             if "enum" in attr_datatype:
                 enum_vals = [enum_val[1:-1] if enum_val[0] == "'" and enum_val[len(enum_val) - 1] == "'" else enum_val for enum_val in attr_datatype.split("enum")[1][1:-1].split(",")]
                 # enum_vals.insert(0, default_dropdown_str)
@@ -595,13 +615,15 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
         
         all_records_alphanumeric_attr_list.append(alphanumeric_attr_list)
         all_records_enum_attr_list.append(enum_attr_list)
+        all_records_values_and_attr_lists.append([link_info, alphanumeric_attr_list, enum_attr_list])
 
     # DEBUGGING
     print("ALPHANUM ATTR LIST: {0}".format(all_records_alphanumeric_attr_list))
     print("ENUM ATTR LIST: {0}".format(all_records_enum_attr_list))
+    print("COMBO ATTR LIST: {0}".format(all_records_values_and_attr_lists))
     # END DEBUGGING
 
-    return all_records_alphanumeric_attr_list, all_records_enum_attr_list
+    return all_records_alphanumeric_attr_list, all_records_enum_attr_list, all_records_values_and_attr_lists
 
 
 # def get_fk_set_list(chosen_entity, include_creator):
@@ -821,27 +843,44 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
                 preexisting_vals_calling_entity = "player_partymember"
             else:
                 preexisting_vals_calling_entity = "character_partymember"
+        elif linking_table == "monsterencounter" and associated_table == "monsterencounter" and entity == "monsterparty":
+            preexisting_vals_calling_entity = "monsterparty_monsterencounter"
 
-        preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values = get_alphanumeric_and_enum_attr_lists_with_values_for_details(preexisting_vals_calling_entity, entity_id)
+        # DEBUGGING
+        print("RETRIEVING PRE-EXISTING VALS; LINKING: {0} - ASSOCIATED: {1}".format(linking_table, associated_table))
+        # END DEBUGGING
+
+        # TODO: if not allow recursion, don't collect preexisting vals, since waste of time and resources
+        preexisting_alphanumeric_metadata_and_values = []
+        preexisting_enum_metadata_and_values = []
+        preexisting_alphaenum_metadata_and_values = []
+        
+        if allow_recursion:
+            preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, preexisting_alphaenum_metadata_and_values = get_alphanumeric_and_enum_attr_lists_with_values_for_details(preexisting_vals_calling_entity, entity_id, True)
 
         # only character class delays some of its returned associated creations
         if entity == 'character' or entity == 'monster':
             associative_relationship_type = "dynamic"
 
             if associated_table == "ability":
-                dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
+                # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
+                dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, []])
             # 5/7 TODO: if associated_table == "partymember" AND there does not exist preexisting value, then do static-dropdown
             elif associated_table == "campaign":
                 # DEBUGGING
-                print("GET ASSOCIATIVES FOR DETAILS: PREEXISTING: \n alphanum: \n {0} \n enum: \n {1}".format(preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values))
+                print("GET ASSOCIATIVES FOR DETAILS: PREEXISTING: \n alphanum: \n {0} \n enum: \n {1} \n all: {2}".format(preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, preexisting_alphaenum_metadata_and_values))
                 # END DEBUGGING
                 # 
-                if len(preexisting_alphanumeric_metadata_and_values) == 0:
+                # Characters can only be in one campaign: only add ability to add a campaign if not already have one
+                # if len(preexisting_alphanumeric_metadata_and_values) == 0:
+                if len(preexisting_alphaenum_metadata_and_values[0][1]) == 0:
                     attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, True)
                     attr_vals_and_metadata_for_dynamic_additions = ["static-dropdown", linking_table, attr_vals_for_dynamic_additions]
-                    dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                    # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                    dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
                 else:
-                    dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
+                    # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
+                    dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, []])
             else:
             # # If ability, need to collect existing values ONLY, not template;
             # # for any other table, collect both existing values and template
@@ -855,7 +894,8 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
             #     # 3. append: (associative_table_name, associated_table_name, [(associated_table_fk_name, associated_fk_val, associated_display_name)])
                 attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, False)
                 attr_vals_and_metadata_for_dynamic_additions = [associative_relationship_type, linking_table, attr_vals_for_dynamic_additions]
-                dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
 
             # elif associated_table == "language":
             #     attr_vals = get_fk_set_list(entity, False, linking_table, False)
@@ -879,19 +919,22 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
                     # multilinked_dynamic_attr_list.append([direct_attr_vals_and_table_data, indirect_attr_vals_and_table_data])
                     direct_fk_set_list.append(indirect_dynamic_attrs)
                     multilinked_attr_vals_and_metadata_for_dynamic_additions = ["dynamic", linking_table, direct_fk_set_list]
-                    multilinked_dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, multilinked_attr_vals_and_metadata_for_dynamic_additions])
+                    # multilinked_dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, multilinked_attr_vals_and_metadata_for_dynamic_additions])
+                    multilinked_dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, multilinked_attr_vals_and_metadata_for_dynamic_additions])
                 else:
                     # this probably doesn't work at all
                     # DEBUGGING
                     print("THIS SHOULDN'T HAPPEN AND IF IT DOES, WE HAVE A PROBLEM")
                     # END DEBUGGING
                     attr_vals_and_metadata_for_dynamic_additions = ["dynamic", linking_table, direct_fk_set_list]
-                    dynamic_attr_list.extend([preexisting_enum_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                    # dynamic_attr_list.extend([preexisting_enum_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                    dynamic_attr_list.extend([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
         else:
             # aside from monsters with ability scores, no other entity has a static attr list
             attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, False)
             attr_vals_and_metadata_for_dynamic_additions = ["dynamic", linking_table, attr_vals_for_dynamic_additions]
-            dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+            # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+            dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
 
     # DEBUGGING
     print("\n CALLER: {2} >> DYNAMIC: {0} - MULTILINKED: {1}".format(len(dynamic_attr_list), len(multilinked_dynamic_attr_list), entity))

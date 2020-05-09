@@ -31,7 +31,7 @@
                 </div>
             </div>
         </header>
-        <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Details</h1> <!-- ('entity_details.html', alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, direct_attr_list=direct_attr_list, multilinked_attr_list=multilinked_attr_list, logged_in_user_details=logged_in_user_details) -->
+        <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Details</h1>
         <form action="" method="POST" autocomplete="off">
             <!-- Input below is a hidden field used to pass the chosen_entity value to the search_result page -->
             <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
@@ -75,13 +75,19 @@
             <!-- FK list traversal removed from here -->
 
             {% if direct_attr_list != None %}
-                {% for direct_attr_set in direct_attr_list %}
-                    {% set associative_alphanumeric_vals_and_info = direct_attr_set[0] %}
-                    {% set associative_enum_vals_and_info = direct_attr_set[1] %}
-                    {% set associative_dynamic_additions_generation_info = direct_attr_set[2] %}
+                {% for direct_attr_value_and_template_set in direct_attr_list %}
+                    {% set direct_attr_link_alpha_enum_values_set = direct_attr_value_and_template_set[0] %}
+                    {% set associative_dynamic_additions_generation_info = direct_attr_value_and_template_set[1] %}
 
-                    {% for record in associative_alphanumeric_vals_and_info %}
-                        {% for alphanumeric_attr_with_datatype in record %}
+                    {% for direct_attr_set in direct_attr_link_alpha_enum_values_set %}
+                        {% set associative_link_info = direct_attr_set[0] %}
+                        {% set associative_alphanumeric_vals_and_info = direct_attr_set[1] %}
+                        {% set associative_enum_vals_and_info = direct_attr_set[2] %}
+
+                        <!-- In theory, if could pass correct ID value to associative_link_info from get_alphanum_enum...._for_details, could make link 
+                             However, getting/passing this is not currently supported in the Views, making this impossible -->
+
+                        {% for alphanumeric_attr_with_datatype in associative_alphanumeric_vals_and_info %}
                         <tr>
                             <td>
                                 {{alphanumeric_attr_with_datatype[0]}} : 
@@ -91,9 +97,7 @@
                             </td>
                         </tr>
                         {% endfor %}
-                    {% endfor %}
-                    {% for record in associative_enum_vals_and_info %}
-                        {% for enum_attr in record %}
+                        {% for enum_attr in associative_enum_vals_and_info %}
                         <tr>
                             <td>
                                 <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
@@ -111,18 +115,12 @@
                             </td>
                         </tr>
                         {% endfor %}
+                    <p> endfor </p>
                     {% endfor %}
 
-                    <!-- <p> DIRECT ATTR SET: {{direct_attr_set}} </p> -->
                     {% if associative_dynamic_additions_generation_info[0] == "static" %}
                         {% for option_fk_set in associative_dynamic_additions_generation_info[2] %}
                             {% set associative_prefix = "static_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
-                            <!-- <p> STATIC ELEM: {{option_fk_set}}</p> -->
-                            <!-- <input type="text" name="insert_for_{{direct_attr_set[1]}}" value="{{option_fk_set[1]}}" style="display:none"/> -->
-
-                            <!--<input type="text" name="{{associative_prefix}}" value="{{option_fk_set[1]}}" style="display:none"/>-->
-                            
-                            <!--<p> DEBUGGING STATIC DIRECT {{associative_prefix}} // name="insert_for_{{direct_attr_set[1]}}" value="{{option_fk_set[1]}}" </p>-->
                             <tr>
                                 <td>
                                     <label for={{option_fk_set[0]}}>{{option_fk_set[0]}} Values: </label>
@@ -149,7 +147,6 @@
                             {% set associative_prefix = "dynamic_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ option[1] %}
                             <tr>
                                 <td>
-                                    <!-- <p> DEBUGGING DYNAMIC DIRECT {{associative_prefix}} // name="insert_for_{{direct_attr_set[1]}}" value="{{option[1]}}" </p> -->
                                     <input type="text" id="{{associative_prefix}}_field_type" name="{{associative_prefix}}_field_type" value="select" style="display:none">
                                     <label for={{option[0]}}>{{option[0]}}(s) : </label>
                                 </td>
@@ -179,13 +176,19 @@
             </table>
             <table>
             {% if multilinked_attr_list != None %}
-                {% for multilinked_attr_set in multilinked_attr_list %}
-                    {% set associative_alphanumeric_vals_and_info = multilinked_attr_set[0] %}
-                    {% set associative_enum_vals_and_info = multilinked_attr_set[1] %}
-                    {% set associative_dynamic_additions_generation_info = multilinked_attr_set[2] %}
+                {% for multilinked_attr_value_and_template_set in multilinked_attr_list %}
+                    {% set multilinked_attr_link_alpha_enum_values_set = multilinked_attr_value_and_template_set[0] %}
+                    {% set associative_dynamic_additions_generation_info = multilinked_attr_value_and_template_set[1] %}
 
-                    {% for record in associative_alphanumeric_vals_and_info %}
-                        {% for alphanumeric_attr_with_datatype in record %}
+                    {% for multilinked_attr_set in multilinked_attr_link_alpha_enum_values_set %}
+
+                        {% set associative_link_info = multilinked_attr_set[0] %}
+                        {% set associative_alphanumeric_vals_and_info = multilinked_attr_set[1] %}
+                        {% set associative_enum_vals_and_info = multilinked_attr_set[2] %}
+
+                        <!-- In theory, could set link to associative entity, if had ID of that entity, but again this is not currently supported -->
+
+                        {% for alphanumeric_attr_with_datatype in associative_alphanumeric_vals_and_info %}
                         <tr>
                             <td>
                                 {{alphanumeric_attr_with_datatype[0]}} : 
@@ -195,9 +198,9 @@
                             </td>
                         </tr>
                         {% endfor %}
-                    {% endfor %}
-                    {% for record in associative_enum_vals_and_info %}
-                        {% for enum_attr in record %}
+                    <!-- end for -->
+                    <!-- for record in enum vals or whatever -->
+                        {% for enum_attr in associative_enum_vals_and_info %}
                         <tr>
                             <td>
                                 <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
@@ -215,14 +218,15 @@
                             </td>
                         </tr>
                         {% endfor %}
+                    <!-- end for -->
                     {% endfor %}
 
+                    <!-- Generate template for parent and any children -->
                     {% set curr_multilinked_attr_metadata = associative_dynamic_additions_generation_info[2] %}
                     {% set curr_base_multilink_attr_metadata = curr_multilinked_attr_metadata[0] %}
                     {% set curr_associated_lists = curr_multilinked_attr_metadata[1] %}
 
                     {% set multi_base_associative_prefix = "multibase_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ curr_base_multilink_attr_metadata[1] %}
-                    <!-- <p> BASE ASSOCIATIVE: {{multi_base_associative_prefix}} // </p> -->
                         <tr>
                             <input type="text" id="{{multi_base_associative_prefix}}_field_type" name="{{multi_base_associative_prefix}}_field_type" value="multi" style="display:none">
                             <input type="text" id="{{multi_base_associative_prefix}}_label" name="{{multi_base_associative_prefix}}_label" value="{{curr_base_multilink_attr_metadata[0]}}" style="display:none">
@@ -249,22 +253,21 @@
                                 </table>
                             </td>
                         </tr>
-                        {% for associated_attr_list in curr_associated_lists %}
-                            <!-- TODO 5/7: enum and alphanum lists for inner multilinked... -->
+                        {% for associated_attr_list_values_and_templates in curr_associated_lists %}
+                            {% set associated_attr_list = associated_attr_list_values_and_templates[1] %}
                             {% for dropdown_metadata_and_fk_vals in associated_attr_list[2] %}
-                            {% set child_associative_prefix = "multichild_" ~ associated_attr_list[1] ~ "_insertassociativefor_" ~ dropdown_metadata_and_fk_vals[1] %}
-                            <!-- <p> CHILD ASSOCIATIVE: {{child_associative_prefix}} </p> -->
-                            <tr>
-                                <input type="text" id="{{child_associative_prefix}}_field_type" name="{{child_associative_prefix}}_field_type" value="select" style="display:none">
-                                <input type="text" id="{{child_associative_prefix}}_label" name="{{child_associative_prefix}}_label" value="{{dropdown_metadata_and_fk_vals[0]}}(s) : " style="display:none">
-                                <input type="text" id="{{multi_base_associative_prefix}}_child" name="{{multi_base_associative_prefix}}_child" value="{{child_associative_prefix}}" style="display:none">
-                                <!-- Add label back? -->
-                                <select id="{{child_associative_prefix}}_options" name="{{child_associative_prefix}}_options" style="display:none">
-                                {% for fk_value_and_metadata in dropdown_metadata_and_fk_vals[2] %}
-                                    <option value="{{fk_value_and_metadata[2]}}">{{fk_value_and_metadata[0]}}</option>
-                                {% endfor %}
-                                </select>
-                            </tr>
+                                {% set child_associative_prefix = "multichild_" ~ associated_attr_list[1] ~ "_insertassociativefor_" ~ dropdown_metadata_and_fk_vals[1] %}
+                                <tr>
+                                    <input type="text" id="{{child_associative_prefix}}_field_type" name="{{child_associative_prefix}}_field_type" value="select" style="display:none">
+                                    <input type="text" id="{{child_associative_prefix}}_label" name="{{child_associative_prefix}}_label" value="{{dropdown_metadata_and_fk_vals[0]}}(s) : " style="display:none">
+                                    <input type="text" id="{{multi_base_associative_prefix}}_child" name="{{multi_base_associative_prefix}}_child" value="{{child_associative_prefix}}" style="display:none">
+                                    <!-- Add label back? -->
+                                    <select id="{{child_associative_prefix}}_options" name="{{child_associative_prefix}}_options" style="display:none">
+                                    {% for fk_value_and_metadata in dropdown_metadata_and_fk_vals[2] %}
+                                        <option value="{{fk_value_and_metadata[2]}}">{{fk_value_and_metadata[0]}}</option>
+                                    {% endfor %}
+                                    </select>
+                                </tr>
                             {% endfor %}
                         {% endfor %}
                     {% endfor %}

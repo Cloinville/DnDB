@@ -998,6 +998,17 @@ BEGIN
         SELECT "NO", "NO", "YES"
         UNION ALL
         SELECT * FROM monsterencounter_details WHERE ID = primary_key_value;
+	ELSEIF entity = "monsterparty_monsterencounter"
+    THEN
+		# 5/7 STUB
+        SELECT "NO", "NO", "NO", "NO"
+        UNION ALL
+		SELECT * FROM monsterparty_monsterencounter_details WHERE ID = primary_key_value;
+	ELSEIF entity = "monsterlootitem"
+    THEN
+		SELECT "NO", "NO"
+        UNION ALL
+        SELECT * FROM monsterlootitem_details WHERE ID = primary_key_value;
 	ELSEIF entity = "monsterparty"
     THEN
 		# 5/7 STUB
@@ -1195,11 +1206,34 @@ AS
 DROP VIEW IF EXISTS monsterencounter_details;
 CREATE VIEW monsterencounter_details
 AS
-    SELECT monsterparty_id as "ID",
+    SELECT encounter_id as "ID",
 		   monster_name as "Monster Name",
            encounter_hp_remaining as "HP Remaining"
     FROM monsterencounter JOIN monster USING(monster_id) JOIN monsterparty USING(monsterparty_id);
     
+# 5/7 STUB(?)
+DROP VIEW IF EXISTS monsterparty_monsterencounter_details;
+CREATE VIEW monsterparty_monsterencounter_details
+AS
+	SELECT monsterparty_id as "ID",
+		   monster_name as "Monster Name",
+		   encounter_hp_remaining as "HP Remaining",
+           group_concat(item_name ORDER BY item_name SEPARATOR', ') as "Loot Items"
+	FROM monsterparty JOIN monsterencounter USING(monsterparty_id)
+					  JOIN monster USING(monster_id) 
+					  LEFT JOIN monsterlootitem USING(encounter_id)
+					  LEFT JOIN item USING(item_id)
+	GROUP BY encounter_id;
+
+# 5/8 WIP
+DROP VIEW IF EXISTS monsterencounter_monsterencounter_details;
+CREATE VIEW monsterencounter_monsterencounter_details
+AS 
+	SELECT encounter_id as "ID",
+		   monster_name as "Monster Name",
+           encounter_hp_remaining as "HP Remaining"
+	FROM monsterencounter JOIN monster USING(monster_id) JOIN monsterparty USING(monsterparty_id);
+
 # 5/7 STUB
 DROP VIEW IF EXISTS monsterlootitem_details;
 CREATE VIEW monsterlootitem_details
