@@ -16,17 +16,12 @@ use csuciklo_dndb;
 -- 			JOIN adventuringparty USING(party_id)
 --             JOIN campaign USING(party_id)
 --             JOIN dungeonmaster USING(dm_id);
-
--- # TODO: remove this, once have implemented Flask-side replacement w/get_previews()
+-- TODO: delete?
 -- DROP PROCEDURE IF EXISTS get_campaign_previews;
 -- DELIMITER $$
--- CREATE PROCEDURE get_campaign_previews(IN in_username VARCHAR(32))
+-- CREATE PROCEDURE get_campaign_previews(in_player_id VARCHAR(255))
 -- BEGIN
--- 	SELECT campaign_id,
--- 		   campaign_name, 
--- 		   party_name
---     FROM campaign_players
---     WHERE player_username = in_username;
+-- 	# STUB -> Need to Implement 
 -- END $$
 -- DELIMITER ;
 
@@ -427,7 +422,10 @@ BEGIN
 	ELSEIF entity = "skill"
     THEN
 		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'skill_id' as 'skill_id', 'Name' as 'Name', 'Saving Throw' as 'Saving Throw' from skill JOIN ability USING(ability_id) UNION SELECT 'skill_id' as 'identifier', 'skill' as 'entity', skill_id as 'skill_id', skill_name as 'Name', ability_name as 'Saving Throw' from skill LEFT JOIN ability USING(ability_id)";
-	ELSE
+	ELSEIF entity = "partymember"
+    THEN
+		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'campaign_id' as 'campaign_id', 'DM' as 'DM', 'Campaign Name' as 'Campaign Name', 'Adventuring Party' as 'Adventuring Party' UNION SELECT 'campaign_id' as 'identifier', 'campaign' as 'entity', campaign_id as 'campaign_id', player_nickname as 'DM', campaign_name as 'Campaign Name', campaign_party_name as 'Adventuring Party' FROM campaign JOIN dungeonmaster USING(dm_id) JOIN player USING(player_id) LEFT JOIN partymember USING(campaign_id)";
+    ELSE
 		SET select_stmt = CONCAT("SELECT * FROM ", entity);
 	END IF;
     
@@ -492,6 +490,24 @@ BEGIN
     SET @select = get_select_for_entity_previews(entity);
     SET @condition = in_condition;
     SET @query = CONCAT(@select, " ", @condition);
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_campaign_previews;
+DELIMITER $$
+CREATE PROCEDURE get_campaign_previews(in_player_id VARCHAR(255), in_dm_id VARCHAR(255))
+BEGIN
+	DECLARE search_condition TEXT DEFAULT "";
+	IF LOWER(in_dm_id) != "none" AND in_dm_id != ""
+    THEN
+		SET search_condition = CONCAT("WHERE partymember.player_id = '", in_player_id, "' OR dm_id = '", in_dm_id, "'");
+	ELSE
+		SET search_condition = CONCAT("WHERE partymember.player_id = '", in_player_id, "'");
+	END IF;
+    SET @select = get_select_for_entity_previews("partymember");
+    SET @query = CONCAT(@select, " ", search_condition);
     PREPARE stmt FROM @query;
     EXECUTE stmt;
 END $$
@@ -728,7 +744,7 @@ BEGIN
 		SET select_condition = "AND table_name != 'dungeonmaster' AND table_name != 'monsterparty' AND table_name != 'monster' AND referenced_table_name != 'character'";
 	ELSEIF in_table = 'character'
     THEN
-		SET select_condition = "AND referenced_table_name != 'player'";
+		SET select_condition = "AND referenced_table_name != 'player' AND referenced_table_name != 'class'";
     ELSEIF in_table = 'class'
     THEN
 		SET select_condition = "AND table_name != 'levelallocation'";

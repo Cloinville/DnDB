@@ -12,10 +12,12 @@
 12. associatives need to do check on if are creator before adding to template
 13. "None" for get_alphanum_enum_vals => change to "" for Entity Details
 14. remove "class" as option for entity details for character
+15. textarea instead of text input for fields with "TEXT" datatype
+16. Add filtering by owned campaign vs. participatory campaign vs. no filter for My Campaigns
 
-15. static-dropdown for partymember in Character Entity Details
-16. Monsterparty campaigns options = limited by curr dm_id
-17. my campaigns
+17. static-dropdown for partymember in Character Entity Details
+18. Monsterparty campaigns options = limited by curr dm_id
+19. my campaigns
 
 
 *** _details view for EVERY table!!

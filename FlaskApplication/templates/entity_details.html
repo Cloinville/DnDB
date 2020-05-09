@@ -115,10 +115,9 @@
                             </td>
                         </tr>
                         {% endfor %}
-                    <p> endfor </p>
                     {% endfor %}
 
-                    {% if associative_dynamic_additions_generation_info[0] == "static" %}
+                    {% if associative_dynamic_additions_generation_info[0] == "static" or associative_dynamic_additions_generation_info[0] == "static-list" or associative_dynamic_additions_generation_info[0] == "static-dropdown" %}
                         {% for option_fk_set in associative_dynamic_additions_generation_info[2] %}
                             {% set associative_prefix = "static_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
                             <tr>
@@ -128,16 +127,27 @@
                                 <td>
                                     <table class="inner_table">
                                         <tr>
-                                            {% for option in option_fk_set[2] %}
-                                            <td>
-                                                {{option[0]}} :
-                                            </td>
-                                            <td>
-                                                <!-- <input type="text" name="{{option_fk_set[1]}}={{option[2]}}" required> -->
-                                                <input type="text" name="{{associative_prefix}}={{option[2]}}" required>
-                                            </td>
+                                            {% if associative_dynamic_additions_generation_info[0] != "static-dropdown" %}
+                                                {% for option in option_fk_set[2] %}
+                                                    <td>
+                                                        {{option[0]}} :
+                                                    </td>
+                                                    <td>
+                                                        <!-- <input type="text" name="{{option_fk_set[1]}}={{option[2]}}" required> -->
+                                                        <input type="text" name="{{associative_prefix}}={{option[2]}}" required>
+                                                    </td>
+                                                {% endfor %}
+                                            {% else %}
+                                                    <td></td>
+                                                    <td>
+                                                        <select name="{{associative_prefix}}">
+                                                            {% for option in option_fk_set[2] %}
+                                                                <option value="{{associative_prefix}}={{option[2]}}">{{option[0]}}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </td>
+                                            {% endif %}
                                         </tr>
-                                        {% endfor %}
                                     </table>
                                 </td>
                             </tr>

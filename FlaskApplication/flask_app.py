@@ -174,9 +174,13 @@ def my_campaigns():
         return redirect(url_for('campaign_details', campaign_id=campaign_id))
 
     # Otherwise, render page with campaign previews
-    campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}')".format(logged_in_user_details['username']))
+    unformatted_campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}', '{1}')".format(logged_in_user_details['player_id'], logged_in_user_details['dm_id']))
+    
+    campaign_previews = get_formatted_previews_and_metadata_list(unformatted_campaign_preview_details)
 
-    return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details, logged_in_user_details=logged_in_user_details)
+    print("\nCAMPAIGN PREVIEWS: {0}\n".format(campaign_previews))
+
+    return render_template('my_campaigns.html', campaign_previews=campaign_previews, logged_in_user_details=logged_in_user_details)
 
 
 # TODO: 4/25: actually implement
@@ -854,7 +858,7 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
         preexisting_alphanumeric_metadata_and_values = []
         preexisting_enum_metadata_and_values = []
         preexisting_alphaenum_metadata_and_values = []
-        
+
         if allow_recursion:
             preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, preexisting_alphaenum_metadata_and_values = get_alphanumeric_and_enum_attr_lists_with_values_for_details(preexisting_vals_calling_entity, entity_id, True)
 
@@ -873,7 +877,7 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
                 # 
                 # Characters can only be in one campaign: only add ability to add a campaign if not already have one
                 # if len(preexisting_alphanumeric_metadata_and_values) == 0:
-                if len(preexisting_alphaenum_metadata_and_values[0][1]) == 0:
+                if len(preexisting_alphaenum_metadata_and_values) <= 0 or len(preexisting_alphaenum_metadata_and_values[0][1]) == 0:
                     attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, True)
                     attr_vals_and_metadata_for_dynamic_additions = ["static-dropdown", linking_table, attr_vals_for_dynamic_additions]
                     # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
