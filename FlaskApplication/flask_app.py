@@ -426,6 +426,9 @@ def entity_details(entity, entity_id):
     if request.method == "POST":
         called_key = None
         for key in request.form:
+            # DEBUGGING
+            print("ENTITY DETAILS: KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+            # END DEBUGGING
             if key.startswith("updatebtn_"):
                 called_key = key[len("updatebtn_"):]
                 break
