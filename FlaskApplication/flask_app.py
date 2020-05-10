@@ -16,7 +16,6 @@ default_dropdown_str = ""
 searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill']
 # creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
 creatable_entities = ['character', 'campaign', 'monsterparty']
-
 # add try-except for db
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -430,13 +429,18 @@ def entity_details(entity, entity_id):
             if key.startswith("updatebtn_"):
                 called_key = key[len("updatebtn_"):]
                 break
+            elif key.startswith("levelupbtn"):
+                called_key = key
+                break
         
         if called_key == None:
             print("NO UPDATE CALLED FOR ENTITY")
+        elif called_key == "levelupbtn":
+            return redirect(url_for('level_up', char_id=request.form[called_key]))
         else:
             print("UPDATED VALUE: KEY: {0}, VALUE: {1}".format(called_key, request.form[called_key]))
-            condition = "WHERE ID = '{0}'".format(entity_id)
-            execute_cmd("CALL update_field_in_table('{0}_details', '{1}', '{2}', '{3}')".format(entity, called_key, request.form[called_key], condition))
+            # condition = "WHERE ID = '{0}'".format(entity_id)
+            execute_cmd("CALL update_field_in_record('{0}_details', '{1}', '{2}', '{3}')".format(entity, called_key, request.form[called_key], entity_id))
 
     chosen_entity = entity
 
@@ -446,7 +450,54 @@ def entity_details(entity, entity_id):
 
     direct_attr_list_values_and_templates, multilinked_attr_list_values_and_templates = get_associative_attr_lists_for_entity_details(chosen_entity, entity_id, True)
 
-    return render_template('entity_details.html', chosen_entity = chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, all_attr_lists=all_attr_lists, direct_attr_list=direct_attr_list_values_and_templates, multilinked_attr_list=multilinked_attr_list_values_and_templates, logged_in_user_details=logged_in_user_details)
+    return render_template('entity_details.html', chosen_entity = chosen_entity, entity_id=entity_id, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, all_attr_lists=all_attr_lists, direct_attr_list=direct_attr_list_values_and_templates, multilinked_attr_list=multilinked_attr_list_values_and_templates, logged_in_user_details=logged_in_user_details)
+
+
+@app.route('/level_up/<char_id>', methods=['POST', 'GET'])
+def level_up(char_id):
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
+    unformatted_classes = execute_cmd_and_get_result("SELECT class_name FROM class")
+    classes = [curr_class[0] if len(curr_class) >= 1 else curr_class for curr_class in unformatted_classes]
+    chosen_class = classes[0]
+
+    level_up_details_link = None
+    if request.method == "POST":
+        if "chosen_class" in request.form:
+            chosen_class = request.form["chosen_class"]
+            level_up_details_link = url_for('level_up_details', chosen_class=chosen_class, char_id=char_id)
+        else:
+            print("LEVEL UP BASE: ")
+            for key in request.form:
+                print("KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+
+    return render_template('level_up.html', char_id=char_id, chosen_class=chosen_class, classes=classes, level_up_details_link=level_up_details_link, logged_in_user_details=logged_in_user_details)
+
+
+@app.route('/level_up_details/<chosen_class>/<char_id>', methods=['GET', 'POST'])
+def level_up_details(chosen_class, char_id):
+    # get hit die for class
+    # get consitution modifier AND current overall level of character
+    # get as static-dropdowns spell options
+    if request.method == 'POST':
+        print("LEVEL UP DETAILS POST")
+        for key in request.form:
+            print("KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+    else:
+        print("GET IN level_up_details!")
+        # TODO: generate lists from char_id and chosen_class
+
+    return render_template('level_up_details.html', alphanumeric_attr_list=[], enum_attr_list=[], fk_set_list=[], direct_attr_list = None)
+
+
+@app.route('/confirmed_level_up/')
+def confirmed_level_up():
+    for key in request.form:
+        print("CONFIRMED LEVEL UP - KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+        # GET CHAR_ID!
+    
+    return redirect('/index')
 
 
 def connect(in_user=None):
@@ -628,43 +679,6 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
     # END DEBUGGING
 
     return all_records_alphanumeric_attr_list, all_records_enum_attr_list, all_records_values_and_attr_lists
-
-
-# def get_fk_set_list(chosen_entity, include_creator):
-#     foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
-    
-#     # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
-#     fk_set_list = []
-
-#     # For each foreign table that the base table references (given as pair: foreign key col name in base table, referenced table name)
-#     for pair in foreign_key_names_and_tables:
-#         local_fk_name = pair[0]
-#         referenced_table = pair[1]
-
-#         # TODO 5/3: check that addition at end of line didn't break functionality
-#         is_creator_reference = (local_fk_name.lower() == "player_id" and chosen_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and chosen_entity == 'monsterencounter')
-
-#         if include_creator or not is_creator_reference:
-#             # Get the display and identification information for all records in that table
-#             referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
-        
-#             # If there were records in the table
-#             if len(referenced_table_record_names_and_metadata) > 0:
-
-#                 # Save the name of the fk column for use in searching later
-#                 foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
-
-#                 # Insert a dummy entry, to have a "no selection" option for dropdowns
-#                 referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
-            
-#                 # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
-#                 fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
-            
-#                 # DEBUGGING
-#                 # print([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
-#                 # END DEBUGGING
-
-#     return fk_set_list
 
 
 # TODO: possibly add fk_condition to this function and db-side function, to allow limiting of fk vals returned
@@ -942,15 +956,6 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
 
     # DEBUGGING
     print("\n CALLER: {2} >> DYNAMIC: {0} - MULTILINKED: {1}".format(len(dynamic_attr_list), len(multilinked_dynamic_attr_list), entity))
-    # if len(multilinked_dynamic_attr_list) > 0:
-    #     print("MULTILINKED[0][1]: {0}".format(multilinked_dynamic_attr_list[0][1]))
-    # for i in range(0, min(10, len(dynamic_attr_list))):
-    #     # print("DYNAMIC: '{0}'".format(dynamic_attr_list[i]))
-    #     print("\nHAVE DYNAMIC")
-    #     if i < len(multilinked_dynamic_attr_list):
-    #         # print("MULTILINKED: '{0}'".format(multilinked_dynamic_attr_list[i]))
-    #         print("\nHAVE MULTILINKED")
-    # END DEBUGGING
 
     return dynamic_attr_list, multilinked_dynamic_attr_list
 
@@ -1085,25 +1090,6 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
                 execute_partial_transaction_cmd(curr_cmd, cursor)
 
         # END DEBUGGING
-        #
-        # db = connect()
-        # cursor = db.cursor()
-        # # start transaction
-        # # insert into chosen_entity values in in_entity_field_values
-        # error = execute_partial_transaction_cmd("")
-        # # get id of newly created entity in form: "pk_name=value"
-        # # for each single level association:
-        # #   insert into associated table: chosen entity's pk_name=value, distant associated entity's pk_name=value, any other vals (ex. abilityscore)
-        # # for each multi level association:
-        # #   1. insert parent
-        # #   2. get parent generated id in form:"pk_name=value"
-        # #   3. For each child:
-        # #       Insert into distant associated table: parent's pk_name=value, 
-        # # end transaction
-        # # commit transaction
-        # db.commit()
-        # cursor.close()
-        # db.close()
         db.commit()
         cursor.close()
         db.close()
@@ -1112,7 +1098,11 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
         print("INSERT RECORD EXCEPTION - {0}".format(e))
         cursor.close()
         db.close()
+
+        # DEBUGGING
         raise e
+        # END DEBUGGING
+
         # rollback?
         return None, e
 
@@ -1255,10 +1245,11 @@ def execute_partial_transaction_cmd(cursor_cmd, cursor, multiple_args=True):
 
 def execute_field_update(entity, field, new_value, condition):
     try:
+        cmd = "CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition)
         # DEBUGGING
-        print("FIELD UPDATE: CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
+        print("FIELD UPDATE: {0}".format(cmd))
         # END DEBUGGING
-        execute_cmd("CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
+        execute_cmd(cmd)
         return True
 
     except Exception as e:
@@ -1354,19 +1345,19 @@ def get_formatted_previews_and_metadata_list(unformatted_records):
         for i in range(0, min(1, end_index)):
             curr_record_identifier_metadata_pair = [column_names_list[i], record[i]]
             # DEBUGGING
-            print("identifier_pair: {0}".format(curr_record_identifier_metadata_pair))
+            # print("identifier_pair: {0}".format(curr_record_identifier_metadata_pair))
             # END DEBUGGING
 
         for i in range(1, min(2, end_index)):
             curr_record_table_name = record[i]
             # DEBUGGING
-            print("table_name: {0}".format(curr_record_table_name))
+            # print("table_name: {0}".format(curr_record_table_name))
             # END DEBUGGING
 
         for i in range(2, min(3, end_index)):
             curr_record_identifier_pair = [column_names_list[i], record[i]]
             # DEBUGGING
-            print("col_val_pair: {0}".format(curr_record_identifier_pair))
+            # print("col_val_pair: {0}".format(curr_record_identifier_pair))
             # END DEBUGGING
 
         for i in range(3, end_index):
@@ -1393,89 +1384,17 @@ def get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(e
     return [embedded_associative_table, embedded_pk_name_and_val[0], embedded_pk_name_and_val[1]]
 
 
-# TODO: DELETE
-@app.route('/players', methods=['GET', 'POST'])
-def players():
-    if request.method == "POST":
-        for key in request.form:
-            print("{0}, {1}".format(key, request.form[key]))
-    return render_template('players.html')
+def get_formatted_attribute_label(unformatted_label):
+    if "_" not in unformatted_label:
+        return unformatted_label
 
+    unformatted_label = unformatted_label.split("_", 1)[1]
 
-# TODO: DELETE
-@app.route('/dynamic_fields', methods=['GET', 'POST'])
-def dynamic_fields():
-    if request.method == "POST":
-        # get which option selected: X or +
-        saved_keys = []
-        saved_vals = []
-        decision = ""
-        decision_key = ""
-        attr_name = ""
-        action = ""
-        field_type = ""
-        last_index = 0
-
-        saved_key_val_pairs = []
-
-        for key in request.form:
-            val = request.form[key]
-            print("{0}, {1}".format(key, val))
-            if "decision" in key:
-                decision = val
-                decision_key = key
-                print("DECISION: {0}".format(decision_key))
-
-            elif "attr_name" in key:
-                attr_name = val
-                print("ATTR: {0}".format(attr_name))
-
-            elif "field_type" in key:
-                field_type = val
-                print("FIELD_TYPE: {0}".format(field_type))
-
-            else:
-                # if val.endswith("/"):
-                #     val = val[0:-1]
-                # if key.endswith("/"):
-                #     key = key[0:-1]
-                # print("STRIPPED VAL: '{0}'".format(val))
-                saved_keys.append(key)
-                saved_vals.append(val)
-        
-        if "delete" in decision_key:
-            action = "delete"
-            attr_to_delete = decision_key[len("decision_delete_"):]
-            print("ATTR TO DELETE: {0}".format(attr_to_delete))
-            del_index = saved_keys.index(attr_to_delete)
-            del saved_keys[del_index]
-            del saved_vals[del_index]
-
-        else:
-            action = "add"
-            
-        for i in range(0, min(len(saved_keys), len(saved_vals))):
-            saved_key_val_pairs.append([saved_keys[i], saved_vals[i]])
-        
+    if unformatted_label == "id":
+        return "ID"
     else:
-        field_type = "text"
-        action = "initialize"
-        saved_key_val_pairs = []
-        saved_key_val_pairs.append(["dm_id_0", '0th-value'])
-        saved_key_val_pairs.append(["dm_id_1", '1st value'])
-        saved_key_val_pairs.append(["dm_id_2", '2nd value'])
-        saved_key_val_pairs.append(["dm_id_3", '3rd value'])
-        attr_name = "dm_id"
-        # length = len(saved_key_val_pairs)
-    # TODO: rather than length, should have a "last unique id" value
-    # length = len(saved_key_val_pairs)
-    last_attr = saved_key_val_pairs[len(saved_key_val_pairs) - 1][0]
-    attr_prefix = "{0}_".format(attr_name)
-    length = int(last_attr[len(attr_prefix):]) + 1
-    print("LENGTH: {0}".format(length))
-
-    return render_template('dynamic_fields.html', attr_name=attr_name, action=action, field_type=field_type, saved_val=saved_key_val_pairs, length=length)
-            
+        formatted_label_components = ["{0}{1}".format(component[0].upper(), component[1:]) if len(component) > 1 else component.upper() for component in unformatted_label.split("_")]
+        return " ".join(formatted_label_components)
 
 
 if __name__ == '__main__':

@@ -32,6 +32,13 @@
             </div>
         </header>
         <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Details</h1>
+        {% if chosen_entity == "character" %}
+            <div class="levelup_btn">
+                <form action="{{url_for('level_up', char_id=entity_id)}}">
+                    <button>Level Up!</button>
+                </form>
+            </div>
+        {% endif %}
         <form action="" method="POST" autocomplete="off">
             <!-- Input below is a hidden field used to pass the chosen_entity value to the search_result page -->
             <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>

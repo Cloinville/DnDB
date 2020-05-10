@@ -663,34 +663,32 @@ BEGIN
 END $$
 DELIMITER ;
 
-# TODO - Currently broken for views ://///
-DROP PROCEDURE IF EXISTS update_field_in_table;
+# TODO - Need to update views switch cases if add more records than can be created by users
+DROP PROCEDURE IF EXISTS update_field_in_record;
 DELIMITER $$
-CREATE PROCEDURE update_field_in_table(in_table VARCHAR(255), in_field VARCHAR(255), new_value VARCHAR(255), in_condition TEXT)
+CREATE PROCEDURE update_field_in_record(in_table VARCHAR(255), in_field VARCHAR(255), new_value VARCHAR(255), record_id_value VARCHAR(255))
 BEGIN
 	DECLARE formatted_in_table VARCHAR(255) DEFAULT "";
---     DECLARE id_name VARCHAR(255) DEFAULT "";
+    DECLARE record_id_name VARCHAR(255) DEFAULT "";
     
---     IF in_table LIKE "%_details"
---     THEN
--- 		SET formatted_in_table = SUBSTRING_INDEX(in_table, "_details", 1);
---         SET id_name = get_primary_key_name_from_table_name(formatted_in_table);
---         IF formatted_in_table = "character" OR formatted_in_table = "language"
---         THEN
--- 			SET formatted_in_table = CONCAT("`", formatted_in_table, "`");
--- 		END IF;
---     ELSE
-	IF in_table = "character" OR in_table = "language"
+    IF in_table LIKE "%_details"
     THEN
-		SET formatted_in_table = CONCAT("`", in_table, "`");
+		SET formatted_in_table = SUBSTRING_INDEX(in_table, "_details", 1);
+        SET record_id_name = get_primary_key_name_from_table_name(formatted_in_table);
 	ELSE
 		SET formatted_in_table = in_table;
+        SET record_id_name = get_primary_key_name_from_table_name(in_table);
 	END IF;
-	SET @query = CONCAT("UPDATE ", formatted_in_table, " SET ", in_field, " = ", "'", new_value, "' ", in_condition);
+    
+    IF formatted_in_table = "character" OR formatted_in_table = "language"
+	THEN
+		SET formatted_in_table = CONCAT("`", formatted_in_table, "`");
+	END IF;
+
+	SET @query = CONCAT("UPDATE ", formatted_in_table, " SET ", in_field, " = ", "'", new_value, "' WHERE ", record_id_name, " = ", record_id_value);
 	PREPARE stmt FROM @query;
 	EXECUTE stmt;
-    
-    DEALLOCATE PREPARE stmt;
+	DEALLOCATE PREPARE stmt;
 END $$
 DELIMITER ;
 
@@ -846,6 +844,37 @@ BEGIN
 END $$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS get_newspells_count_for_class_at_level;
+DELIMITER $$
+CREATE PROCEDURE get_newspells_count_for_class_at_level(in_class_id VARCHAR(255), in_level VARCHAR(255))
+BEGIN
+	WITH curr_level
+	AS
+		(SELECT newspellscount_cantrips, 
+				newspellscount_spell_slots_level_1,
+				newspellscount_spell_slots_level_2,
+				newspellscount_spell_slots_level_3,
+				newspellscount_spell_slots_level_4,
+				newspellscount_spell_slots_level_5,
+				newspellscount_spell_slots_level_6,
+				newspellscount_spell_slots_level_7,
+				newspellscount_spell_slots_level_8,
+				newspellscount_spell_slots_level_9
+		FROM classlevelnewspellscount WHERE class_id = in_class_id AND newspellscount_class_level = in_level)
+	SELECT curr_level.newspellscount_cantrips - prev_level.newspellscount_cantrips as "New Cantrips", 
+		   curr_level.newspellscount_spell_slots_level_1 - prev_level.newspellscount_spell_slots_level_1 as "New Level 1",
+		   curr_level.newspellscount_spell_slots_level_2 - prev_level.newspellscount_spell_slots_level_2 as "New Level 2",
+		   curr_level.newspellscount_spell_slots_level_3 - prev_level.newspellscount_spell_slots_level_3 as "New Level 3",
+           curr_level.newspellscount_spell_slots_level_4 - prev_level.newspellscount_spell_slots_level_4 as "New Level 4",
+           curr_level.newspellscount_spell_slots_level_5 - prev_level.newspellscount_spell_slots_level_5 as "New Level 5",
+           curr_level.newspellscount_spell_slots_level_6 - prev_level.newspellscount_spell_slots_level_6 as "New Level 6",
+           curr_level.newspellscount_spell_slots_level_7 - prev_level.newspellscount_spell_slots_level_7 as "New Level 7",
+           curr_level.newspellscount_spell_slots_level_8 - prev_level.newspellscount_spell_slots_level_8 as "New Level 8",
+           curr_level.newspellscount_spell_slots_level_9 - prev_level.newspellscount_spell_slots_level_9 as "New Level 9"
+	FROM classlevelnewspellscount as prev_level JOIN curr_level ON prev_level.class_id = in_class_id AND prev_level.newspellscount_class_level = (SELECT in_level - 1);
+END $$
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS get_open_campaigns_of_player;
 DELIMITER $$
 CREATE PROCEDURE get_open_campaigns_of_player(in_player_id VARCHAR(255))
@@ -889,24 +918,24 @@ BEGIN
 			SET allow_edits = "YES";
 		END IF;
         SELECT "NO" as "ID",
-		       allow_edits as "Name", 
-			   "NO" as "Player",
-		       allow_edits as "Gender",
-               "NO" as "Level", 
-               "NO" as "Race", 
-               "NO" as "Speed", 
-               "NO" as "Size", 
-               allow_edits as "Backstory", 
-               allow_edits as "Age", 
-               allow_edits as "Height",
-		       allow_edits as "Notes", 
-               allow_edits as "Public Class", 
-               allow_edits as "Base HP", 
-               allow_edits as "Remaining HP",
-               allow_edits as "Platinum", 
-               allow_edits as "Gold", 
-               allow_edits as "Silver", 
-               allow_edits as "Copper"
+		       allow_edits as "char_name", 
+			   "NO" as "player_nickname",
+		       allow_edits as "char_gender",
+               "NO" as "char_overall_level", 
+               "NO" as "race_name", 
+               "NO" as "race_speed", 
+               "NO" as "race_size", 
+               allow_edits as "char_backstory", 
+               allow_edits as "char_age", 
+               allow_edits as "char_height",
+		       allow_edits as "char_notes", 
+               allow_edits as "char_public_class", 
+               allow_edits as "char_base_hp", 
+               allow_edits as "char_hp_remaining",
+               allow_edits as "char_platinum", 
+               allow_edits as "char_gold", 
+               allow_edits as "char_silver", 
+               allow_edits as "char_copper"
 		UNION ALL
 		SELECT * FROM character_details WHERE ID = primary_key_value;
 	ELSEIF entity = "characterabilityscore"
@@ -945,7 +974,7 @@ BEGIN
 	ELSEIF entity = "classlearnablespell"
     THEN
 		# 5/7 STUB
-        SELECT "NO", "NO"
+        SELECT "NO", "NO", "NO"
         UNION ALL
         SELECT * FROM classlearnablespell_details WHERE ID = primary_key_value;
 	ELSEIF entity = "classlevelnewspellcount"
@@ -1108,24 +1137,24 @@ DROP VIEW IF EXISTS character_details;
 CREATE VIEW character_details
 AS
     SELECT char_id as "ID",
-		   char_name as "Name", 
-		   player_nickname as "Player",
-		   char_gender as "Gender",
-           char_overall_level as "Level", 
-           race_name as "Race", 
-           race_speed as "Speed", 
-           race_size as "Size", 
-           char_backstory as "Backstory", 
-           char_age as "Age", 
-           char_height as "Height",
-		   char_notes as "Notes", 
-           char_public_class as "Public Class", 
-           char_base_hp as "Base HP", 
-           char_hp_remaining as "Remaining HP",
-           char_platinum as "Platinum", 
-           char_gold as "Gold", 
-           char_silver as "Silver", 
-           char_copper as "Copper"
+		   char_name as "char_name", 
+		   player_nickname as "player_nickname",
+		   char_gender as "char_gender",
+           char_overall_level as "char_overall_level", 
+           race_name as "race_name", 
+           race_speed as "race_speed", 
+           race_size as "race_size", 
+           char_backstory as "char_backstory", 
+           char_age as "char_age", 
+           char_height as "char_height",
+		   char_notes as "char_notes", 
+           char_public_class as "char_public_class", 
+           char_base_hp as "char_base_hp", 
+           char_hp_remaining as "char_hp_remaining",
+           char_platinum as "char_platinum", 
+           char_gold as "char_gold", 
+           char_silver as "char_silver", 
+           char_copper as "char_copper"
     FROM `character` JOIN race USING(race_id) 
 		             JOIN player USING(player_id);
                      
@@ -1304,6 +1333,7 @@ DROP VIEW IF EXISTS classlearnablespell_details;
 CREATE VIEW classlearnablespell_details
 AS
     SELECT class_id as "ID",
+		   cls_required_class_level as "cls_required_class_level",
 		   spell_name as "Spell Name"
     FROM classlearnablespell JOIN spell USING(spell_id);
     

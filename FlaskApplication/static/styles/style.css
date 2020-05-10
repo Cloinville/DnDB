@@ -441,3 +441,8 @@ input[readonly]{
     background-color: #478547;
     border: none;
 }
+
+.levelup_btn button:hover{
+    background-color:white;
+    color:black;
+}

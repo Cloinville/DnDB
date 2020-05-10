@@ -1,0 +1,56 @@
+<html>
+    <head>
+        <title> DnDB Homepage </title>
+        <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <header class="page">
+            <div class="nav-bar-title">
+                <h1>DnDB</h1>
+            </div>
+            <div class="nav-bar">
+                <div class="menu-end-item"></div>
+                <ul class="menu">
+                    <li><a href="{{ url_for('index') }}">Home</a></li>
+                    <li><a href="{{ url_for('my_campaigns') }}">My Campaigns</a></li>
+                    <li><a href="{{ url_for('my_creations') }}">My Creations</a></li>
+                    <li><a href="{{ url_for('create') }}">Create</a></li>
+                    <li><a href="{{ url_for('search') }}">Search</a></li>
+                </ul>
+                <div class="menu-end-item">
+                    <div class="dropdown">
+                        <a href="{{url_for('profile')}}">Hello, {{logged_in_user_details['nickname']}}</a>
+                        <div class="dropdown-content">
+                            <a href="{{url_for('profile')}}">My Profile</a>
+                            {% if logged_in_user_details['dm_id'] == None %}
+                            <a href="{{url_for('premium')}}">Upgrade to Premium</a>
+                            {% endif %}
+                            <a href="{{url_for('logout')}}">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <h1 class="page_title">Level Up!</h1>
+        <form action="" method="POST">
+            <label for="entity">Choose a class: </label>
+            <select id="classes" name="chosen_class">
+                {% for class in classes %}
+                    {% if class == chosen_class %}
+                        <option name="class" value="{{class}}" selected>{{class}}</option>
+                    {% else %}
+                        <option name="class" value="{{class}}">{{class}}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <input type=submit value="Select Class">
+        </form>
+        {% if level_up_details_link != None %}
+        <iframe src="{{level_up_details_link}}"
+                name="search_template"
+                height="50%"
+                width="100%">
+        </iframe>
+        {% endif %}
+    </body>
+</html>
