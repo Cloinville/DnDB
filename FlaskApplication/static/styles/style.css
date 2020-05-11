@@ -341,3 +341,103 @@ header.page{
 iframe{
     border: none;
 }
+
+.btn_remove{
+    width:20px;
+    height:20px;
+    font-size:8px;
+    border-radius: 0px;
+}
+
+.btn_add_dynamic_field{
+    width:20px;
+    height:20px;
+    font-size:15px;
+    border-radius: 0px;
+    display: block;
+    text-decoration: none;
+    color: white;
+    background-color: black;
+    text-align: center;
+    font-family: sans-serif;
+    border:none;
+    margin:auto;
+}
+
+.inner_table td {
+    border-top: thin solid; 
+    border-bottom: thin solid;
+}
+
+.inner_table td:first-child {
+     border-left: thin solid;
+}
+
+.inner_table td:last-child {
+     border-right: thin solid;
+}
+
+.inner_table{
+    border: 1px solid black;
+    width:500px;
+}
+
+.inner_table select{
+    width:100%;
+}
+
+
+.innermost_table td{
+    border: none;
+    border-right: none;
+    border-left:none;
+    width:100%;
+}
+
+.innermost_table select{
+    width:100%;
+}
+
+.innermost_table td:last-child{
+    border:none;
+}
+
+.innermost_table td:first-child{
+    border:none;
+}
+
+.inner_table tr:nth-child(odd){
+    background-color:#ccc;
+}
+
+.inner_table tr:nth-child(even){
+    background-color:#eee;
+}
+
+.innermost_table tr{
+    background-color: #eee;
+}
+
+.innermost_table tr:nth-child(odd){
+    background-color:#eee;
+}
+
+.innermost_table tr:nth-child(even){
+    background-color:#eee;
+}
+
+button:disabled, button[disabled]{
+    background-color: #bbb;
+    cursor: not-allowed;
+}
+
+button[disabled]:hover{
+    background-color: #bbb;
+    color: #fff;
+    cursor:not-allowed;
+}
+
+input[readonly]{
+    background-color: #478547;
+    border: none;
+}

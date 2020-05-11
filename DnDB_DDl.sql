@@ -1,5 +1,4 @@
 USE csuciklo_dndb;
-
 -- # Saved list of all table drops for cleaning while finalizing structure
 -- # TODO: 1. Remove this once no longer needed, BEFORE final submission!
 -- #	   2. Add "password" field to player in CREATE TABLE statement
@@ -37,7 +36,8 @@ USE csuciklo_dndb;
 CREATE TABLE player(
 	player_id INT(10) PRIMARY KEY AUTO_INCREMENT,
     player_username VARCHAR(32) UNIQUE NOT NULL,
-    player_nickname VARCHAR(128) NOT NULL,
+--     player_nickname VARCHAR(128) NOT NULL,
+	player_nickname VARCHAR(16) NOT NULL,
     player_password VARCHAR(32) NOT NULL
 )ENGINE=InnoDB;
 
@@ -53,12 +53,7 @@ CREATE TABLE campaign(
     campaign_setting_description TEXT DEFAULT NULL,
     campaign_is_active BOOLEAN DEFAULT FALSE NOT NULL,
     dm_id INT(10) NOT NULL,
-    party_id INT(10) DEFAULT NULL
-)ENGINE=InnoDB;
-
-CREATE TABLE adventuringparty(
-	party_id INT(10) PRIMARY KEY AUTO_INCREMENT,
-    party_name VARCHAR(128) DEFAULT NULL
+    campaign_party_name VARCHAR(128) DEFAULT NULL
 )ENGINE=InnoDB;
 
 CREATE TABLE ability(
@@ -93,7 +88,7 @@ CREATE TABLE monster(
 
 CREATE TABLE race(
 	race_id SMALLINT PRIMARY KEY AUTO_INCREMENT,
-    race_is_playable BOOLEAN DEFAULT FALSE,
+--     race_is_playable BOOLEAN DEFAULT FALSE,
     race_name VARCHAR(128) DEFAULT NULL,
     race_description TEXT DEFAULT NULL,
     race_speed SMALLINT DEFAULT NULL,
@@ -109,17 +104,21 @@ CREATE TABLE `character`(
     char_age SMALLINT DEFAULT NULL,
     char_height VARCHAR(10) DEFAULT NULL,
     char_notes TEXT DEFAULT NULL,
-    char_public_class VARCHAR(128) NOT NULL DEFAULT "adventurer",
+    char_public_class ENUM(
+								"barbarian", "bard", "cleric", "druid", "fighter",
+								"monk", "paladin", "ranger", "rogue", "sorcerer",
+                                "warlock", "wizard", "multiclass", "classless"
+						   ) NOT NULL DEFAULT "classless",
     char_base_hp SMALLINT DEFAULT NULL,
     char_hp_remaining SMALLINT DEFAULT NULL,
-    char_overall_level TINYINT NOT NULL DEFAULT 1,
     char_platinum INT NOT NULL DEFAULT 0,
     char_gold INT NOT NULL DEFAULT 0,
     char_silver INT NOT NULL DEFAULT 0,
     char_copper INT NOT NULL DEFAULT 0,
     race_id SMALLINT NOT NULL,
-    party_id INT(10) DEFAULT NULL,
-    player_id INT(10) NOT NULL
+    # party_id INT(10) DEFAULT NULL,
+    player_id INT(10) NOT NULL,
+	char_overall_level TINYINT NOT NULL DEFAULT 0
 )ENGINE=InnoDB;
 
 CREATE TABLE item(
@@ -189,13 +188,15 @@ CREATE TABLE characterlearnedlanguage(
 CREATE TABLE characterinventoryitem(
 	char_id INT(10),
     item_id INT(10),
-    PRIMARY KEY(char_id, item_id)
+    characterinventoryitem_counter SMALLINT UNIQUE NOT NULL DEFAULT 0,
+    PRIMARY KEY(char_id, item_id, characterinventoryitem_counter)
 )ENGINE=InnoDB;
 
 CREATE TABLE monsterlootitem(
 	encounter_id INT(11),
     item_id INT(10),
-    PRIMARY KEY(encounter_id, item_id)	
+    monsterlootitem_counter SMALLINT UNIQUE NOT NULL DEFAULT 0,
+    PRIMARY KEY(encounter_id, item_id, monsterlootitem_counter)	
 )ENGINE=InnoDB;
 
 CREATE TABLE monsterencounter(
@@ -278,15 +279,22 @@ CREATE TABLE levelallocation(
     PRIMARY KEY(char_id, class_id)
 )ENGINE=InnoDB;
 
+CREATE TABLE partymember(
+	campaign_id INT(10) NOT NULL,
+    player_id INT(10) NOT NULL,
+    char_id INT(10) UNIQUE DEFAULT NULL,
+    PRIMARY KEY(campaign_id, player_id)
+)ENGINE=InnoDB;
+
 # Add foreign key constraints
 ALTER TABLE dungeonmaster ADD CONSTRAINT `dm_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
 ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
-ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
+# ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
 ALTER TABLE skill ADD CONSTRAINT `skill_fk_ability_id` FOREIGN KEY(ability_id) REFERENCES ability(ability_id);
 ALTER TABLE monster ADD CONSTRAINT `monster_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE race ADD CONSTRAINT `race_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
-ALTER TABLE `character` ADD CONSTRAINT `character_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
+# ALTER TABLE `character` ADD CONSTRAINT `character_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
 ALTER TABLE item ADD CONSTRAINT `item_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE weapon ADD CONSTRAINT `weapon_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
@@ -317,3 +325,5 @@ ALTER TABLE levelallocation ADD CONSTRAINT `levelallocation_fk_char_id` FOREIGN 
 ALTER TABLE levelallocation ADD CONSTRAINT `levelallocation_fk_class_id` FOREIGN KEY(class_id) REFERENCES class(class_id);
 ALTER TABLE classlearnablespell ADD CONSTRAINT `cls_fk_class_id` FOREIGN KEY(class_id) REFERENCES class(class_id);
 ALTER TABLE classlearnablespell ADD CONSTRAINT `cls_fk_spell_id` FOREIGN KEY(spell_id) REFERENCES spell(spell_id);
+ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_campaign_id` FOREIGN KEY(campaign_id) REFERENCES campaign(campaign_id);
+ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);

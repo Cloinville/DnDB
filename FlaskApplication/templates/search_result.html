@@ -36,8 +36,8 @@
             {% if records_and_metadata == None %}
             <p>No results found</p>
             {% else %}
-                    <form method="POST" action="{{url_for('entity_details')}}">
-                            {% for record_and_metadata in records_and_metadata %}
+                    {% for record_and_metadata in records_and_metadata %}
+                        <form action="{{url_for('entity_details', entity=record_and_metadata[0], entity_id=record_and_metadata[2][1])}}">
                             <div class="preview-item">
                                 <button name="{{record_and_metadata[0]}}_btn" value="{{record_and_metadata[2][0]}}={{record_and_metadata[2][1]}}">
                                     <h1>{{record_and_metadata[0]}}</h1>
@@ -46,8 +46,8 @@
                                     {% endfor %}
                                 </button>
                             </div>
-                            {% endfor %}
-                    </form>
+                        </form>
+                        {% endfor %}
                 </div>
             {% endif %}
         </div>

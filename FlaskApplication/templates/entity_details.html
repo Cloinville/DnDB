@@ -1,7 +1,7 @@
 <html>
     <head>
         <title> DnDB Homepage </title>
-        <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
+        <link href="../../static/styles/style.css" rel="stylesheet" type="text/css">
     </head>
     <body>
         <header class="page">
@@ -31,6 +31,173 @@
                 </div>
             </div>
         </header>
-        <h1 class="page_title">Details</h1>
+        <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Details</h1> <!-- ('entity_details.html', alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, direct_attr_list=direct_attr_list, multilinked_attr_list=multilinked_attr_list, logged_in_user_details=logged_in_user_details) -->
+        <form action="" method="POST" autocomplete="off">
+            <!-- Input below is a hidden field used to pass the chosen_entity value to the search_result page -->
+            <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
+            <table>
+            {% for alphanumeric_attr_with_datatype in alphanumeric_attr_list %}
+            <tr>
+                <td>
+                    {{alphanumeric_attr_with_datatype[0]}} : 
+                </td>
+                <td>
+                    <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
+                </td>
+            </tr>
+            {% endfor %}
+            {% for enum_attr in enum_attr_list %}
+            <tr>
+                <td>
+                    <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                </td>
+                <td>
+                    <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
+                        {% for enum_val in enum_attr[1] %}
+                            {% if enum_val == enum_attr[3] %}
+                                <option value="{{enum_val}}" selected>{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                            {% else %}
+                                <option value="{{enum_val}}">{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+            {% endfor %}
+
+            <!-- FK list traversal removed from here -->
+
+            {% if direct_attr_list != None %}
+                {% for direct_attr_set in direct_attr_list %}
+                    <!-- <p> DIRECT ATTRE SET: {{direct_attr_set}} </p> -->
+                    {% if direct_attr_set[0] == "static" %}
+                        {% for option_fk_set in direct_attr_set[2] %}
+                            {% set associative_prefix = "static_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
+                            <!-- <p> STATIC ELEM: {{option_fk_set}}</p> -->
+                            <!-- <input type="text" name="insert_for_{{direct_attr_set[1]}}" value="{{option_fk_set[1]}}" style="display:none"/> -->
+
+                            <!--<input type="text" name="{{associative_prefix}}" value="{{option_fk_set[1]}}" style="display:none"/>-->
+                            
+                            <!--<p> DEBUGGING STATIC DIRECT {{associative_prefix}} // name="insert_for_{{direct_attr_set[1]}}" value="{{option_fk_set[1]}}" </p>-->
+                            <tr>
+                                <td>
+                                    <label for={{option_fk_set[0]}}>{{option_fk_set[0]}} Values: </label>
+                                </td>
+                                <td>
+                                    <table class="inner_table">
+                                        <tr>
+                                            {% for option in option_fk_set[2] %}
+                                            <td>
+                                                {{option[0]}} :
+                                            </td>
+                                            <td>
+                                                <!-- <input type="text" name="{{option_fk_set[1]}}={{option[2]}}" required> -->
+                                                <input type="text" name="{{associative_prefix}}={{option[2]}}" required>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        {% for option in direct_attr_set[2] %}
+                            {% set associative_prefix = "dynamic_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option[1] %}
+                            <tr>
+                                <td>
+                                    <!-- <p> DEBUGGING DYNAMIC DIRECT {{associative_prefix}} // name="insert_for_{{direct_attr_set[1]}}" value="{{option[1]}}" </p> -->
+                                    <input type="text" id="{{associative_prefix}}_field_type" name="{{associative_prefix}}_field_type" value="select" style="display:none">
+                                    <label for={{option[0]}}>{{option[0]}}(s) : </label>
+                                </td>
+                                <td>
+                                    <table class="inner_table">
+                                        <tr>
+                                            <td>
+                                                <input type="button" name="{{associative_prefix}}" id="{{associative_prefix}}" value="+" class="btn_add_dynamic_field">
+                                            </td>
+                                            <td>
+                                                <select id="{{associative_prefix}}_options" name="{{associative_prefix}}_options" style="display:none">
+                                                    {% for fk_value_and_metadata in option[2] %}
+                                                    <option value="{{fk_value_and_metadata[2]}}">{{fk_value_and_metadata[0]}}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </td>
+                                            <td>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            </table>
+            <table>
+            {% if multilinked_attr_list != None %}
+                {% for multilinked_attr_set in multilinked_attr_list %}
+                    {% set curr_multilinked_attr_metadata = multilinked_attr_set[2] %}
+                    {% set curr_base_multilink_attr_metadata = curr_multilinked_attr_metadata[0] %}
+                    {% set curr_associated_lists = curr_multilinked_attr_metadata[1] %}
+
+                    {% set multi_base_associative_prefix = "multibase_" ~ multilinked_attr_set[1] ~ "_insertassociativefor_" ~ curr_base_multilink_attr_metadata[1] %}
+                    <!-- <p> BASE ASSOCIATIVE: {{multi_base_associative_prefix}} // </p> -->
+                        <tr>
+                            <input type="text" id="{{multi_base_associative_prefix}}_field_type" name="{{multi_base_associative_prefix}}_field_type" value="multi" style="display:none">
+                            <input type="text" id="{{multi_base_associative_prefix}}_label" name="{{multi_base_associative_prefix}}_label" value="{{curr_base_multilink_attr_metadata[0]}}" style="display:none">
+                            <label for={{curr_base_multilink_attr_metadata[0]}}>{{curr_base_multilink_attr_metadata[0]}}(s) : </label>
+                            
+                        </tr>
+                        <tr>
+                            <td>
+                                <table>
+                                    <tr>
+                                        <td>
+                                        </td>
+                                        <td>
+                                            <select id="{{multi_base_associative_prefix}}_options" name="{{multi_base_associative_prefix}}_options" style="display:none">
+                                                {% for fk_value_and_metadata in curr_base_multilink_attr_metadata[2] %}
+                                                    <option value="{{fk_value_and_metadata[2]}}">{{fk_value_and_metadata[0]}}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <input type="button" name="{{multi_base_associative_prefix}}" id="{{multi_base_associative_prefix}}" value="+" class="btn_add_dynamic_field">
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                        {% for associated_attr_list in curr_associated_lists %}
+                            {% for dropdown_metadata_and_fk_vals in associated_attr_list[2] %}
+                            {% set child_associative_prefix = "multichild_" ~ associated_attr_list[1] ~ "_insertassociativefor_" ~ dropdown_metadata_and_fk_vals[1] %}
+                            <!-- <p> CHILD ASSOCIATIVE: {{child_associative_prefix}} </p> -->
+                            <tr>
+                                <input type="text" id="{{child_associative_prefix}}_field_type" name="{{child_associative_prefix}}_field_type" value="select" style="display:none">
+                                <input type="text" id="{{child_associative_prefix}}_label" name="{{child_associative_prefix}}_label" value="{{dropdown_metadata_and_fk_vals[0]}}(s) : " style="display:none">
+                                <input type="text" id="{{multi_base_associative_prefix}}_child" name="{{multi_base_associative_prefix}}_child" value="{{child_associative_prefix}}" style="display:none">
+                                <!-- Add label back? -->
+                                <select id="{{child_associative_prefix}}_options" name="{{child_associative_prefix}}_options" style="display:none">
+                                {% for fk_value_and_metadata in dropdown_metadata_and_fk_vals[2] %}
+                                    <option value="{{fk_value_and_metadata[2]}}">{{fk_value_and_metadata[0]}}</option>
+                                {% endfor %}
+                                </select>
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    {% endfor %}
+            {% endif %}
+            <tr>
+                <td>
+                    <input type="submit" name="submit_btn" value="Save Changes">
+                </td>
+                <td>
+                    <input type="submit" name="submit_btn" value="Revert">
+                </td>
+            </tr>
+            </table>
+        </form>
+        <script src="../../static/jquery-3.5.0.js"></script>
+        <script src="../../static/dynamic_fields.js" type="text/javascript"></script>
     </body>
 </html>
