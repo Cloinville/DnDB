@@ -483,6 +483,7 @@ def level_up_details(chosen_class, char_id):
     # get hit die for class
     # get consitution modifier AND current overall level of character
     # get as static-dropdowns spell options
+    print("LEVEL UP DETAILS: Class, Char ID: {0}, {1}".format(chosen_class, char_id))
     if request.method == 'POST':
         print("LEVEL UP DETAILS POST")
         for key in request.form:
@@ -491,12 +492,13 @@ def level_up_details(chosen_class, char_id):
         print("GET IN level_up_details!")
         class_id, hit_die_str, spell_metadata_and_values_list = get_level_up_data_list(char_id, chosen_class)
         # TODO: generate lists from char_id and chosen_class
+    print("LEVEL UP DETAILS: Class_ID, hit_die_str, spell_metadata_and_values_list: {0}, {1}, {2}".format(class_id, hit_die_str, spell_metadata_and_values_list))
 
     return render_template('level_up_details.html', hit_die_str=hit_die_str, spell_metadata_and_values_list=spell_metadata_and_values_list, char_id=char_id, class_id=class_id)
 
 
-@app.route('/confirmed_level_up/<char_id>/<chosen_class>', methods=['GET', 'POST'])
-def confirmed_level_up(char_id, chosen_class):
+@app.route('/confirmed_level_up/<char_id>/<class_id>', methods=['GET', 'POST'])
+def confirmed_level_up(char_id, class_id):
     new_hp = ""
     new_spells = []
 
@@ -509,7 +511,7 @@ def confirmed_level_up(char_id, chosen_class):
             # javascript validates no repeats of spells, so can just append
             new_spells.append(value)
 
-    level_up_character_in_db(char_id, chosen_class, new_hp, new_spells)
+    level_up_character_in_db(char_id, class_id, new_hp, new_spells)
     
     return redirect('/index')
 
