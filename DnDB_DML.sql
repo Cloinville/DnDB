@@ -1,73 +1,5 @@
 use csuciklo_dndb;
 
--- DROP VIEW IF EXISTS campaign_players;
--- CREATE VIEW campaign_players 
--- AS
--- SELECT player.player_id,
--- 	   player.player_username,
--- 	   `character`.char_id,
---        `character`.char_name,
---        adventuringparty.party_id,
---        adventuringparty.party_name,
---        campaign.campaign_id,
---        campaign.campaign_name,
---        dungeonmaster.dm_id
--- FROM player JOIN `character` USING(player_id)
--- 			JOIN adventuringparty USING(party_id)
---             JOIN campaign USING(party_id)
---             JOIN dungeonmaster USING(dm_id);
--- TODO: delete?
--- DROP PROCEDURE IF EXISTS get_campaign_previews;
--- DELIMITER $$
--- CREATE PROCEDURE get_campaign_previews(in_player_id VARCHAR(255))
--- BEGIN
--- 	# STUB -> Need to Implement 
--- END $$
--- DELIMITER ;
-
--- # Create a view for each of the associated entities
--- DROP VIEW IF EXISTS character_abilities;
--- CREATE VIEW character_abilities
--- AS
--- SELECT *
--- FROM characterabilityscore JOIN ability USING(ability_id);
-
--- DROP VIEW IF EXISTS race_vulnerabilities;
--- CREATE VIEW race_vulnerabilities
--- AS
--- SELECT *
--- FROM vulnerability JOIN damagetype USING(damage_type_id);
-
--- DROP VIEW IF EXISTS race_resistances;
--- CREATE VIEW race_resistances
--- AS
--- SELECT *
--- FROM resistance JOIN damagetype USING(damage_type_id);
-
--- DROP VIEW IF EXISTS class_spells;
--- CREATE VIEW class_spells
--- AS
--- SELECT *
--- FROM classlearnablespell JOIN spell USING(spell_id);
-
--- DROP VIEW IF EXISTS spell_components;
--- CREATE VIEW spell_components
--- AS
--- SELECT *
--- FROM spellcomponent JOIN item USING(item_id);
-
--- DROP VIEW IF EXISTS monster_abilities;
--- CREATE VIEW monster_abilities
--- AS
--- SELECT *
--- FROM monsterabilityscore JOIN ability USING(ability_id);
-
--- DROP VIEW IF EXISTS race_ability_modifiers;
--- CREATE VIEW race_ability_modifiers
--- AS
--- SELECT *
--- FROM raceabilityscoremodifier JOIN ability USING(ability_id);
-
 DROP TRIGGER IF EXISTS default_player_nickname;
 DELIMITER $$
 CREATE TRIGGER default_player_nickname
@@ -848,30 +780,49 @@ DROP PROCEDURE IF EXISTS get_newspells_count_for_class_at_level;
 DELIMITER $$
 CREATE PROCEDURE get_newspells_count_for_class_at_level(in_class_id VARCHAR(255), in_level VARCHAR(255))
 BEGIN
-	WITH curr_level
-	AS
-		(SELECT newspellscount_cantrips, 
-				newspellscount_spell_slots_level_1,
-				newspellscount_spell_slots_level_2,
-				newspellscount_spell_slots_level_3,
-				newspellscount_spell_slots_level_4,
-				newspellscount_spell_slots_level_5,
-				newspellscount_spell_slots_level_6,
-				newspellscount_spell_slots_level_7,
-				newspellscount_spell_slots_level_8,
-				newspellscount_spell_slots_level_9
-		FROM classlevelnewspellscount WHERE class_id = in_class_id AND newspellscount_class_level = in_level)
-	SELECT curr_level.newspellscount_cantrips - prev_level.newspellscount_cantrips as "New Cantrips", 
-		   curr_level.newspellscount_spell_slots_level_1 - prev_level.newspellscount_spell_slots_level_1 as "New Level 1",
-		   curr_level.newspellscount_spell_slots_level_2 - prev_level.newspellscount_spell_slots_level_2 as "New Level 2",
-		   curr_level.newspellscount_spell_slots_level_3 - prev_level.newspellscount_spell_slots_level_3 as "New Level 3",
-           curr_level.newspellscount_spell_slots_level_4 - prev_level.newspellscount_spell_slots_level_4 as "New Level 4",
-           curr_level.newspellscount_spell_slots_level_5 - prev_level.newspellscount_spell_slots_level_5 as "New Level 5",
-           curr_level.newspellscount_spell_slots_level_6 - prev_level.newspellscount_spell_slots_level_6 as "New Level 6",
-           curr_level.newspellscount_spell_slots_level_7 - prev_level.newspellscount_spell_slots_level_7 as "New Level 7",
-           curr_level.newspellscount_spell_slots_level_8 - prev_level.newspellscount_spell_slots_level_8 as "New Level 8",
-           curr_level.newspellscount_spell_slots_level_9 - prev_level.newspellscount_spell_slots_level_9 as "New Level 9"
-	FROM classlevelnewspellscount as prev_level JOIN curr_level ON prev_level.class_id = in_class_id AND prev_level.newspellscount_class_level = (SELECT in_level - 1);
+-- 	DECLARE in_class_id VARCHAR(255) DEFAULT "";
+--     DECLARE in_level VARCHAR(255) DEFAULT "";
+--     SELECT class_id INTO in_char_id FROM class WHERE LOWER(class_name) = in_class_name;
+--     SELECT count(*) + 1 INTO in_level FROM levelallocation WHERE char_id = in_char_id;
+	IF in_level = 1
+		THEN
+			SELECT newspellscount_cantrips as "New Cantrips", 
+				   newspellscount_spell_slots_level_1 as "New Level 1",
+				   newspellscount_spell_slots_level_2 as "New Level 2",
+		           newspellscount_spell_slots_level_3 as "New Level 3",
+                   newspellscount_spell_slots_level_4 as "New Level 4",
+                   newspellscount_spell_slots_level_5 as "New Level 5",
+                   newspellscount_spell_slots_level_6 as "New Level 6",
+                   newspellscount_spell_slots_level_7 as "New Level 7",
+                   newspellscount_spell_slots_level_8 as "New Level 8",
+                   newspellscount_spell_slots_level_9 as "New Level 9"
+	        FROM classlevelnewspellscount WHERE class_id = in_class_id AND newspellscount_class_level = in_level;
+	ELSE
+		WITH curr_level
+		AS
+			(SELECT newspellscount_cantrips, 
+				    newspellscount_spell_slots_level_1,
+					newspellscount_spell_slots_level_2,
+					newspellscount_spell_slots_level_3,
+					newspellscount_spell_slots_level_4,
+					newspellscount_spell_slots_level_5,
+					newspellscount_spell_slots_level_6,
+					newspellscount_spell_slots_level_7,
+					newspellscount_spell_slots_level_8,
+					newspellscount_spell_slots_level_9
+			FROM classlevelnewspellscount WHERE class_id = in_class_id AND newspellscount_class_level = in_level)
+		SELECT curr_level.newspellscount_cantrips - prev_level.newspellscount_cantrips as "New Cantrips", 
+		   	   curr_level.newspellscount_spell_slots_level_1 - prev_level.newspellscount_spell_slots_level_1 as "New Level 1",
+		   	   curr_level.newspellscount_spell_slots_level_2 - prev_level.newspellscount_spell_slots_level_2 as "New Level 2",
+		   	   curr_level.newspellscount_spell_slots_level_3 - prev_level.newspellscount_spell_slots_level_3 as "New Level 3",
+           	   curr_level.newspellscount_spell_slots_level_4 - prev_level.newspellscount_spell_slots_level_4 as "New Level 4",
+           	   curr_level.newspellscount_spell_slots_level_5 - prev_level.newspellscount_spell_slots_level_5 as "New Level 5",
+           	   curr_level.newspellscount_spell_slots_level_6 - prev_level.newspellscount_spell_slots_level_6 as "New Level 6",
+           	   curr_level.newspellscount_spell_slots_level_7 - prev_level.newspellscount_spell_slots_level_7 as "New Level 7",
+           	   curr_level.newspellscount_spell_slots_level_8 - prev_level.newspellscount_spell_slots_level_8 as "New Level 8",
+           	   curr_level.newspellscount_spell_slots_level_9 - prev_level.newspellscount_spell_slots_level_9 as "New Level 9"
+		FROM classlevelnewspellscount as prev_level JOIN curr_level ON prev_level.class_id = in_class_id AND prev_level.newspellscount_class_level = (SELECT in_level - 1);
+	END IF;
 END $$
 DELIMITER ;
 
@@ -880,6 +831,71 @@ DELIMITER $$
 CREATE PROCEDURE get_open_campaigns_of_player(in_player_id VARCHAR(255))
 BEGIN
 	SELECT campaign_id FROM partymember WHERE player_id = in_player_id AND char_id IS NULL;
+END $$
+DELIMITER ;
+
+DROP FUNCTION IF EXISTS get_level_up_hp_calc_str_for_character;
+DELIMITER $$
+CREATE FUNCTION get_level_up_hp_calc_str_for_character(in_char_id VARCHAR(255), in_class_id VARCHAR(255))
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+	DECLARE hit_die_str VARCHAR(255) DEFAULT "";
+    DECLARE constitution_modifier_str VARCHAR(255) DEFAULT "";
+    SELECT class_hit_die INTO hit_die_str FROM class WHERE class_id = in_class_id;
+    SELECT FLOOR((charabilityscore_value - 10) / 2) INTO constitution_modifier_str FROM characterabilityscore WHERE ability_id = 3 AND char_id = in_char_id; 
+	RETURN CONCAT("1", hit_die_str, " + ", constitution_modifier_str);
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS get_learnable_spells_for_character_of_class_at_level;
+DELIMITER $$
+CREATE PROCEDURE get_learnable_spells_for_character_of_class_at_level(in_char_id VARCHAR(255), in_class_id VARCHAR(255), in_class_level VARCHAR(255))
+BEGIN
+	IF in_class_level = 0
+    THEN
+		SELECT spell_id, spell_name
+        FROM spell
+        WHERE spell_min_level = 0;
+	ELSE
+		SELECT spell_id, spell_name 
+		FROM classlearnablespell JOIN spell USING(spell_id) 
+		WHERE class_id = in_class_id 
+			  AND cls_required_class_level = in_class_level 
+		      AND spell_id NOT IN ( SELECT spell_id 
+									FROM learnedspell 
+									WHERE char_id = in_char_id 
+								  );
+	END IF;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS increase_char_base_hp;
+DELIMITER $$
+CREATE PROCEDURE increase_char_base_hp(in_char_id VARCHAR(255), in_new_hp VARCHAR(255))
+BEGIN
+	DECLARE old_hp VARCHAR(255) DEFAULT "";
+    SELECT IFNULL(char_base_hp, 0) INTO old_hp FROM `character` WHERE char_id = in_char_id;
+    UPDATE `character` SET char_base_hp = in_new_hp + old_hp WHERE char_id = in_char_id;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS give_character_new_level_allocation;
+DELIMITER $$
+CREATE PROCEDURE give_character_new_level_allocation(in_char_id VARCHAR(255), in_class_id VARCHAR(255))
+BEGIN
+	DECLARE old_level_for_class VARCHAR(255) DEFAULT NULL;
+    SELECT levelallocation_level INTO old_level_for_class FROM levelallocation WHERE class_id = in_class_id AND char_id = in_char_id;
+    
+    IF old_level_for_class IS NOT NULL
+    THEN
+		UPDATE levelallocation SET levelallocation_level = old_level_for_class + 1 WHERE class_id = in_class_id AND char_id = in_char_id;
+	ELSE
+		SET @query = CONCAT("INSERT INTO levelallocation(char_id, class_id, levelallocation_level) VALUES(", in_char_id, ", ", in_class_id, ", 1)");
+        PREPARE stmt FROM @query;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+	END IF;
 END $$
 DELIMITER ;
 
@@ -949,6 +965,8 @@ BEGIN
         # FINISH
         SELECT
 				"NO" as "ID",
+                "NO" as "DELETE THIS COLUMN",
+                "NO" as "Ability ID",
                 "NO" as "Ability Name",
                 "NO" as "Value"
         UNION ALL
@@ -1368,8 +1386,8 @@ INSERT ON monsterlootitem
 FOR EACH ROW
 BEGIN
 	SET NEW.monsterlootitem_counter = ( SELECT IFNULL(MAX(monsterlootitem_counter), 0) + 1
-											   FROM monsterlootitem
-                                               WHERE encounter_id = NEW.encounter_id AND item_id = NEW.item_id
+										FROM monsterlootitem
+                                        WHERE encounter_id = NEW.encounter_id AND item_id = NEW.item_id
 											 );
 END $$
 DELIMITER ;
