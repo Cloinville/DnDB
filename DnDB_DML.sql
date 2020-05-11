@@ -37,7 +37,7 @@ BEGIN
 END $$
 DELIMITER ;
 
-# If don't ever use outside of the linked procedure, this can be deleted and
+# If dont ever use outside of the linked procedure, this can be deleted and
 # have its select just moved directly into the procedure that uses it
 DROP FUNCTION IF EXISTS get_select_for_foreign_key_columns_and_referenced_table_names;
 DELIMITER $$
@@ -753,7 +753,7 @@ BEGIN
 END $$
 DELIMITER ;
 
-# Saved for potential future use, but if don't add anything then we can delete it
+# Saved for potential future use, but if dont add anything then we can delete it
 DROP PROCEDURE IF EXISTS get_most_recent_pk_val_and_pk_colname;
 DELIMITER $$
 CREATE PROCEDURE get_most_recent_pk_val_and_pk_colname(in_table VARCHAR(255))
@@ -1403,7 +1403,7 @@ AS
            encounter_hp_remaining as "HP Remaining"
 	FROM monsterencounter JOIN monster USING(monster_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS monsterlootitem_details;	
 CREATE VIEW monsterlootitem_details	
 AS	
@@ -1445,7 +1445,7 @@ AS
 					 left join `character` using (char_id)	
 					 left join campaign using (campaign_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS raceabilityscoremodifier_details;	
 CREATE VIEW raceabilityscoremodifier_details	
 AS	
@@ -1457,7 +1457,7 @@ AS
     FROM raceabilityscoremodifier left join ability using(ability_id)	
 							   	  left join race using (race_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS raceknownlanguage_details;	
 CREATE VIEW raceknownlanguage_details	
 AS	
@@ -1468,7 +1468,7 @@ AS
     FROM raceknownlanguage left join race using(race_id)	
 						   left join `language` using (language_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS characterlearnedlanguage_details;	
 CREATE VIEW characterlearnedlanguage_details	
 AS	
@@ -1487,7 +1487,7 @@ AS
 -- 		   spell_name as "Spell Name"
 --     FROM classlearnablespell JOIN spell USING(spell_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS classlevelnewspellscount_details;	
 CREATE VIEW classlevelnewspellscount_details	
 AS	
@@ -1507,7 +1507,7 @@ AS
 		   newspellscount_spell_slots_level_9 as "Spell Slot Level 9"	
 	FROM classlevelnewspellscount left join class using (class_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS classlearnablespell_details;	
 CREATE VIEW classlearnablespell_details	
 AS	
@@ -1519,7 +1519,7 @@ AS
     FROM classlearnablespell left join class using(class_id)	
 						   left join spell using (spell_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS learnedspell_details;	
 CREATE VIEW learnedspell_details	
 AS	
@@ -1530,7 +1530,7 @@ AS
     FROM learnedspell left join `character` using (char_id)	
 					  left join spell using (spell_id);
 
-# 5/10 Colin's Version
+# 5/10 Colins Version
 DROP VIEW IF EXISTS levelallocation_details;	
 CREATE VIEW levelallocation_details 	
 AS	
@@ -1542,7 +1542,7 @@ AS
         (`levelallocation`	
         JOIN `class` ON (`levelallocation`.`class_id` = `class`.`class_id`));
 
-# 5/10 Colin's Version + Edit
+# 5/10 Colins Version + Edit
 DROP VIEW IF EXISTS spell_details;	
 CREATE VIEW spell_details	
 AS	

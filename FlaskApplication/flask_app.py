@@ -8,7 +8,7 @@ import json
 app = Flask(__name__)
 
 # configure db
-connection_values = yaml.load(open('db.yaml'))
+connection_values = yaml.load(open('db.yaml')) # add file path (make sure this file is there on repo is eric test locally)
 logged_in_user_details = {'username': None, 'nickname': None, 'player_id': None, 'dm_id': None}
 # logged_in_user = None
 # logged_in_user_nickname = ""
