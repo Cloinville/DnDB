@@ -469,7 +469,7 @@ def level_up(char_id):
     if request.method == "POST":
         if "chosen_class" in request.form:
             chosen_class = request.form["chosen_class"]
-            level_up_details_link = url_for('level_up_details', chosen_class=chosen_class, char_id=char_id)
+            level_up_details_link = ""
         else:
             print("LEVEL UP BASE: ")
             for key in request.form:
@@ -489,16 +489,27 @@ def level_up_details(chosen_class, char_id):
             print("KEY, VALUE: {0}, {1}".format(key, request.form[key]))
     else:
         print("GET IN level_up_details!")
+        class_id, hit_die_str, spell_metadata_and_values_list = get_level_up_data_list(char_id, chosen_class)
         # TODO: generate lists from char_id and chosen_class
 
-    return render_template('level_up_details.html', alphanumeric_attr_list=[], enum_attr_list=[], fk_set_list=[], direct_attr_list = None)
+    return render_template('level_up_details.html', hit_die_str=hit_die_str, spell_metadata_and_values_list=spell_metadata_and_values_list, char_id=char_id, class_id=class_id)
 
 
-@app.route('/confirmed_level_up/')
-def confirmed_level_up():
+@app.route('/confirmed_level_up/<char_id>/<chosen_class>', methods=['GET', 'POST'])
+def confirmed_level_up(char_id, chosen_class):
+    new_hp = ""
+    new_spells = []
+
     for key in request.form:
         print("CONFIRMED LEVEL UP - KEY, VALUE: {0}, {1}".format(key, request.form[key]))
-        # GET CHAR_ID!
+        value = request.form[key]
+        if key == "hit_die_str":
+            new_hp = value
+        elif key.startswith("new_spell_level_"):
+            # javascript validates no repeats of spells, so can just append
+            new_spells.append(value)
+
+    level_up_character_in_db(char_id, chosen_class, new_hp, new_spells)
     
     return redirect('/index')
 
@@ -1110,6 +1121,22 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
         return None, e
 
 
+def level_up_character_in_db(char_id, class_id, new_hp, new_spells):
+    try:
+        db = connect()
+        cursor = db.cursor()
+        execute_partial_transaction_cmd("CALL increase_char_base_hp('{0}', '{1}')".format(char_id, new_hp), cursor)
+        execute_partial_transaction_cmd("CALL give_character_new_level_allocation('{0}', '{1}')".format(char_id, class_id), cursor)
+        for spell_id in new_spells:
+            execute_partial_transaction_cmd("INSERT INTO learnedspell(char_id, spell_id) VALUES('{0}', '{1}')".format(char_id, spell_id), cursor)
+
+        db.commit()
+        cursor.close()
+        db.close()
+    except Exception as e:
+        print(e)
+        return
+
 # TODO: replace every other instance of execute to get fetchall() with this
 def execute_cmd_and_get_result(cursor_cmd, multiple_args=True):
     result = None
@@ -1398,6 +1425,26 @@ def get_formatted_attribute_label(unformatted_label):
     else:
         formatted_label_components = ["{0}{1}".format(component[0].upper(), component[1:]) if len(component) > 1 else component.upper() for component in unformatted_label.split("_")]
         return " ".join(formatted_label_components)
+
+
+def get_level_up_data_list(char_id, class_name):
+    class_id = execute_cmd_and_get_result("SELECT class_id FROM class WHERE class_name = '{0}'".format(class_name))[0][0]
+    char_level = execute_cmd_and_get_result("SELECT count(*) FROM levelallocation WHERE char_id = '{0}'".format(char_id))[0][0]
+    spellslots_info = execute_cmd_and_get_result("CALL get_newspells_count_for_class_at_level('{0}', '{1}')".format(class_id, char_level + 1))
+    spell_metadata_and_values_list = []
+    if spellslots_info != []:
+        spellslots_info = spellslots_info[0]
+        for i in range(0, len(spellslots_info)):
+            if spellslots_info[i] > 0:
+                level_str = "{0}".format(i)
+                num_new_spells_of_level = spellslots_info[i]
+                spell_options_of_level = execute_cmd_and_get_result("CALL get_learnable_spells_for_character_of_class_at_level(''{0}', '{1}', '{2}')".format(char_id, class_id, i))
+                spell_metadata_and_values_list.append([level_str, num_new_spells_of_level, spell_options_of_level])
+
+    hit_die_addition_str = execute_cmd_and_get_result("SELECT get_level_up_hp_calc_str_for_character('{0}', '{1}')".format(char_id, class_id))[0][0]
+
+    print("LEVEL UP INFO: {0}, {1}, {2}, {3}, {4}".format(class_id, char_level, spellslots_info, spell_metadata_and_values_list, hit_die_addition_str))
+    return class_id, hit_die_addition_str, spell_metadata_and_values_list
 
 
 if __name__ == '__main__':

@@ -46,7 +46,7 @@
             <input type=submit value="Select Class">
         </form>
         {% if level_up_details_link != None %}
-        <iframe src="{{level_up_details_link}}"
+        <iframe src="{{url_for('level_up_details', chosen_class=chosen_class, char_id=char_id)}}"
                 name="search_template"
                 height="50%"
                 width="100%">

@@ -3,125 +3,68 @@
         <link href="../../static/styles/style.css" rel="stylesheet" type="text/css">
     </head>
     <body>
-        <form action="{{ url_for('confirmed_level_up') }}" target="_PARENT"  method="POST" autocomplete="off">
-            <input type="text" name="test" placeholder="REMOVE THIS AFTER DEBUGGING"/>
+        <form class="levelup_form" action="{{ url_for('confirmed_level_up', char_id=char_id, class_id=class_id) }}" target="_PARENT"  method="POST" autocomplete="off">
             <table>
-            {% for alphanumeric_attr_with_datatype in alphanumeric_attr_list %}
                 <tr>
                     <td>
-                        {{alphanumeric_attr_with_datatype[0]}} : <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" placeholder=""/>
+                        <label for="hit_die_str">New Hit Points ({{hit_die_str}}) : </label>
+                        <p>CHAR ID: '{{char_id}}'</p>
+                    </td>
+                    <td>
+                        <input type="text" name="hit_die_str" placeholder="{{hit_die_str}}" pattern="[0-9]+" required/>
                     </td>
                 </tr>
-            {% endfor %}
-
-            <!-- Probably don't need this... -->
-            {% for enum_attr in enum_attr_list %}
-            <tr>
-                <td>
-                    <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
-                </td>
-                <td>
-                    <select id={{enum_attr[0]}} name={{enum_attr[0]}}>
-                        {% for enum_val in enum_attr[1] %}
-                            <option value="{{enum_val}}">{{enum_val}}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-            </tr>
-            {% endfor %}
-
-            <!-- Probably don't need this either... -->
-            {% for fk_set in fk_set_list %}
-            <tr>
-                <td>
-                    <label for={{fk_set[0]}}>{{fk_set[0]}} : </label>
-                </td>
-                <td>
-                    <select id={{fk_set[1]}} name={{fk_set[1]}}>
-                        {% for fk_value_and_metadata in fk_set[2] %}
-                            <option value={{fk_value_and_metadata[2]}}>{{fk_value_and_metadata[0]}}</option>
-                        {% endfor %}
-                    </td>
-                </select>
-            </tr>
-            {% endfor %}
-        </table>
-        <table>
-        {% if direct_attr_list != None %}
-            {% for direct_attr_set in direct_attr_list %}
-                <!-- <p> DIRECT ATTRE SET: {{direct_attr_set}} </p> -->
-                {% if direct_attr_set[0] == "static-list" or direct_attr_set[0] == "static-dropdown" %}
-                    {% for option_fk_set in direct_attr_set[2] %}
-                        {% set associative_prefix = direct_attr_set[0] ~ "_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
-                        <tr>
-                            <td>
-                                <label for={{option_fk_set[0]}}>{{option_fk_set[0]}} Values: </label>
-                            </td>
-                            <td>
-                                <table class="inner_table">
-                                    <tr>
-                                        {% if direct_attr_set[0] == "static-list" %}
-                                        {% for option in option_fk_set[2] %}
-                                        <td>
-                                            {{option[0]}} :
-                                        </td>
-                                        <td>
-                                            <!-- <input type="text" name="{{option_fk_set[1]}}={{option[2]}}" required> -->
-                                            <input type="text" name="{{associative_prefix}}={{option[2]}}" required>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                    {% else %}
+                {% for spell_with_metadata in spell_metadata_and_values_list %}
+                    {% set spell_level = spell_with_metadata[0] %}
+                    {% set new_spells_count_for_level = spell_with_metadata[1] %}
+                    {% set spell_options_with_metadata = spell_with_metadata[2] %}
+                    <tr>
+                        <td>
+                            <label for="new_spell_level_{{spell_level}}">New Level {{spell_level}} Spell(s): </label>
+                        </td>
+                        <td>
+                            <table>
+                                {% for i in range(new_spells_count_for_level) %}
+                                <tr>
                                     <td>
-
-                                    </td>
-                                    <td>
-                                        <select name="{{associative_prefix}}">
-                                        {% for option in option_fk_set[2] %}
-                                        <option value="{{associative_prefix}}={{option[2]}}">{{option[0]}}</option>
-                                        {% endfor %}
+                                        <select id="new_spell_level_{{spell_level}}_{{i}}" name="new_spell_level_{{spell_level}}_{{i}}">
+                                            {% for spell_option in spell_options_with_metadata %}
+                                                <option value="{{spell_option[0]}}">{{spell_option[1]}}</option>
+                                            {% endfor %}
                                         </select>
                                     </td>
-                                    {% endif %}
-                                </table>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                {% else %}
-                    {% for option in direct_attr_set[2] %}
-                        {% set associative_prefix = "dynamic_" ~ direct_attr_set[1] ~ "_insertassociativefor_" ~ option[1] %}
-                        <tr>
-                            <td>
-                                <!-- <p> DEBUGGING DYNAMIC DIRECT {{associative_prefix}} // name="insert_for_{{direct_attr_set[1]}}" value="{{option[1]}}" </p> -->
-                                <input type="text" id="{{associative_prefix}}_field_type" name="{{associative_prefix}}_field_type" value="select" style="display:none">
-                                <label for={{option[0]}}>{{option[0]}}(s) : </label>
-                            </td>
-                            <td>
-                                <table class="inner_table">
-                                    <tr>
-                                        <td>
-                                            <input type="button" name="{{associative_prefix}}" id="{{associative_prefix}}" value="+" class="btn_add_dynamic_field">
-                                        </td>
-                                        <td>
-                                            <select id="{{associative_prefix}}_options" name="{{associative_prefix}}_options" style="display:none">
-                                                {% for fk_value_and_metadata in option[2] %}
-                                                <option value="{{fk_value_and_metadata[2]}}">{{fk_value_and_metadata[0]}}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </td>
-                                        <td>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                {% endif %}
-            {% endfor %}
-        {% endif %}
-        </table>
-            <input type="submit_levelup" value="Confirm Level Up">
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td>
+                        <input type="submit" name="submit_btn" value="Confirm Level Up">
+                    </td>
+                </tr>
             </table>
         </form>
+        <script>
+            var frm = document.querySelector('form.levelup_form');
+            var inputs = frm.querySelectorAll('select');
+
+            frm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var select_choices = [];
+
+                for(var i = 0; i < inputs.length; i++) {
+                    if(select_choices.indexOf(inputs[i].value) != -1) {
+                        inputs[i].style.backgroundColor = "red";
+                        return false;
+                    }else{
+                        inputs[i].style.backgroundColor = "white";
+                        select_choices.push(inputs[i].value);
+                    }
+                }
+                frm.submit();
+            });
+        </script>
     </body>
 </html>

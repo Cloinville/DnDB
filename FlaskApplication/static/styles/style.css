@@ -9,6 +9,11 @@ body{
     background-color: #478547;
 }
 
+table{
+    margin-left:auto;
+    margin-right: auto;
+    /* width: 70%; */
+}
 /*
 body.signup_page{
     background-color: #2d532d;
@@ -440,6 +445,19 @@ button[disabled]:hover{
 input[readonly]{
     background-color: #478547;
     border: none;
+}
+
+.levelup_btn button{
+    background-color: rgb(77, 67, 223);
+    border-radius: 10;
+    font-size: 24px;
+    margin-left: auto;
+    margin-right:auto;
+    height: 70px;
+    width: 150px;
+    border: 2px solid rgb(34, 19, 114);
+    margin-bottom: 25px;
+    margin-top: 25px;
 }
 
 .levelup_btn button:hover{
