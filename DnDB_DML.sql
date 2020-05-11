@@ -905,6 +905,271 @@ AS
     FROM monster LEFT JOIN dungeonmaster USING(dm_id) 
 			     LEFT JOIN player USING(player_id);
 
+DROP VIEW IF EXISTS player_details;
+CREATE VIEW player_details
+AS
+    SELECT player_id as "ID",
+		   player_nickname as "Nickname"
+    FROM player;
+
+DROP VIEW IF EXISTS campaign_details;
+CREATE VIEW campaign_details
+AS
+    SELECT campaign_id as "ID",
+		   campaign_name as "Name", 
+		   campaign_plot_description as "Plot",
+		   campaign_setting_description as "Setting",
+		   campaign_is_active as "Active",
+		   player_nickname as "DM",
+		   campaign_party_name as "Party Name"
+    FROM campaign left join dungeonmaster USING(dm_id)
+				  left join player using (player_id);
+
+DROP VIEW IF EXISTS dungeonmaster_details;
+CREATE VIEW dungeonmaster_details
+AS
+    SELECT dm_id as "ID",
+		   player_nickname as "Nickname"
+    FROM dungeonmaster left join player using (player_id);
+
+DROP VIEW IF EXISTS partymember_details;
+CREATE VIEW partymember_details
+AS
+    SELECT 
+		   partymember.campaign_id as "ID",
+		   campaign_name as "Campaign",
+		   partymember.player_id,
+		   player_nickname as "Player",
+           partymember.char_id,
+		   char_name as "Character"	
+    FROM partymember left join player using (player_id)
+					 left join `character` using (char_id)
+					 left join campaign using (campaign_id);
+
+DROP VIEW IF EXISTS ability_details;
+CREATE VIEW ability_details
+AS
+    SELECT ability_name as "Ability",
+		   ability_description as "Description"
+    FROM ability;
+
+DROP VIEW IF EXISTS skill_details;
+CREATE VIEW skill_details
+AS
+    SELECT skill_name as "Skill",
+		   skill_description as "Description",
+		   ability_name as "Ability"
+    FROM skill left join ability using(ability_id);
+
+DROP VIEW IF EXISTS characterabilityscore_details;
+CREATE VIEW characterabilityscore_details
+AS
+    SELECT char_id as "ID",
+		   char_name as "Character",
+		   ability_id,
+		   ability_name as "Ability",
+		   charabilityscore_value as "Score"
+    FROM characterabilityscore left join ability using(ability_id)
+							   left join `character` using (char_id);
+
+DROP VIEW IF EXISTS monsterabilityscore_details;
+CREATE VIEW monsterabilityscore_details
+AS
+    SELECT monster_id as "ID",
+		   monster_name as "Monster",
+		   ability_id,
+		   ability_name as "Ability",
+           monsterabilityscore_value as "Score"
+    FROM monsterabilityscore left join ability using(ability_id)
+							 left join monster using (monster_id);
+
+DROP VIEW IF EXISTS raceabilityscoremodifier_details;
+CREATE VIEW raceabilityscoremodifier_details
+AS
+    SELECT race_id as "ID",
+		   race_name as "Race",
+		   ability_id,
+		   ability_name as "Ability",
+           racemodifier_value as "Score"
+    FROM raceabilityscoremodifier left join ability using(ability_id)
+							   	  left join race using (race_id);
+
+DROP VIEW IF EXISTS language_details;
+CREATE VIEW language_details
+AS
+    SELECT language_name as "Language"
+    FROM `language`;
+
+DROP VIEW IF EXISTS raceknownlanguage_details;
+CREATE VIEW raceknownlanguage_details
+AS
+    SELECT race_id as "ID",
+		   race_name as "Race",
+		   language_id,
+		   language_name as "Language"
+    FROM raceknownlanguage left join race using(race_id)
+						   left join `language` using (language_id);
+
+DROP VIEW IF EXISTS characterlearnedlanguage_details;
+CREATE VIEW characterlearnedlanguage_details
+AS
+    SELECT char_id as "ID",
+		   char_name as "Character",
+		   language_id,
+		   language_name as "Language"
+    FROM characterlearnedlanguage left join `character` using(char_id)
+						   left join `language` using (language_id);
+
+DROP VIEW IF EXISTS class_details;
+CREATE VIEW class_details
+AS
+    SELECT class_name as "Class",
+		   class_description as "Description",
+		   class_hit_die as "Hit Die"
+	FROM class;
+
+DROP VIEW IF EXISTS classlevelnewspellscount_details;
+CREATE VIEW classlevelnewspellscount_details
+AS
+    SELECT class_id as "ID",
+		   class_name as "Class",
+		   newspellscount_class_level as "Level",
+		   newspellscount_cantrips as "Cantrips",
+		   newspellscount_spells as "Spells",
+		   newspellscount_spell_slots_level_1 as "Spell Slot Level 1",
+		   newspellscount_spell_slots_level_2 as "Spell Slot Level 2",
+		   newspellscount_spell_slots_level_3 as "Spell Slot Level 3",
+		   newspellscount_spell_slots_level_4 as "Spell Slot Level 4",
+		   newspellscount_spell_slots_level_5 as "Spell Slot Level 5",
+		   newspellscount_spell_slots_level_6 as "Spell Slot Level 6",
+		   newspellscount_spell_slots_level_7 as "Spell Slot Level 7",
+		   newspellscount_spell_slots_level_8 as "Spell Slot Level 8",
+		   newspellscount_spell_slots_level_9 as "Spell Slot Level 9"
+		   
+	FROM classlevelnewspellscount left join class using (class_id);
+
+DROP VIEW IF EXISTS classlearnablespell_details;
+CREATE VIEW classlearnablespell_details
+AS
+    SELECT class_id as "ID",
+		   class_name as "Class",
+		   spell_id,
+		   spell_name as "Spell",
+		   cls_required_class_level as "Required Level"
+    FROM classlearnablespell left join class using(class_id)
+						   left join spell using (spell_id);
+
+DROP VIEW IF EXISTS spell_details;
+CREATE VIEW spell_details
+AS
+    SELECT spell_name as "Spell",
+		   spell_description as "Description",
+		   spell_min_level as "Min Level",
+		   spell_range as "Range",
+		   spell_casting_time as "Cast Time",
+		   spell_duration as "Duration",
+		   spell_is_concentration as "Concentration",
+		   magicschool_name as "School of Magic"
+	FROM spell left join schoolofmagic using(magicschool_id);
+
+DROP VIEW IF EXISTS schoolofmagic_details;
+CREATE VIEW schoolofmagic_details
+AS
+    SELECT magicschool_name as "Magic School",
+		   magicschool_description  as "Description"
+    FROM schoolofmagic;
+
+DROP VIEW IF EXISTS learnedspell_details;
+CREATE VIEW learnedspell_details
+AS
+    SELECT char_id as "ID",
+		   char_name  as "Name",
+		   spell_id,
+		   spell_name as "Spell"
+    FROM learnedspell left join `character` using (char_id)
+					  left join spell using (spell_id);
+
+DROP VIEW IF EXISTS levelallocation_details;
+CREATE VIEW levelallocation_details 
+AS
+    SELECT 
+        char_id AS `ID`,
+        class_name AS `Class Name`,
+        levelallocation_level AS `Levels`
+    FROM
+        (`levelallocation`
+        JOIN `class` ON (`levelallocation`.`class_id` = `class`.`class_id`));
+
+DROP VIEW IF EXISTS race_details;
+CREATE VIEW race_details
+AS
+    SELECT race_name as "Race",
+		   race_description  as "Description",
+		   race_speed as "Speed",
+		   race_size  as "Size"
+    FROM race;
+
+DROP VIEW IF EXISTS characterinventoryitem_details;
+CREATE VIEW characterinventoryitem_details
+AS
+    SELECT char_id as "ID",
+		   char_name as "Name",
+		   item_id,
+		   item_name as "Item",
+		   characterinventoryitem_counter
+    FROM characterinventoryitem left join `character` using (char_id) 
+								left join item using(item_id);
+							
+DROP VIEW IF EXISTS item_details;
+CREATE VIEW item_details
+AS
+    SELECT item_name as "Item",
+		   item_description  as "Description",
+		   item_rarity as "Rarity",
+		   item_type  as "Type",
+		   item_price as "Price",
+		   item_requires_attunement as "Attunement"
+    FROM item;		
+
+DROP VIEW IF EXISTS weapon_details;
+CREATE VIEW weapon_details
+AS
+    SELECT item_id as "ID",
+		   item_name as "Item",
+		   weapon_num_dice_to_roll as "Roll",
+		   weapon_damage_modifier  as "Damage Mod",
+		   weapon_range as "Range",
+		   damage_type as "Damage Typr"
+    FROM weapon left join item using (item_id);				
+
+DROP VIEW IF EXISTS monsterlootitem_details;
+CREATE VIEW monsterlootitem_details
+AS
+    SELECT encounter_id as "ID",
+		   item_id,
+		   item_name as "Item",
+		   monsterlootitem_counter
+    FROM monsterlootitem left join item using (item_id)
+						 left join monsterencounter using (encounter_id);	
+
+DROP VIEW IF EXISTS monsterencounter_details;
+CREATE VIEW monsterencounter_details
+AS
+    SELECT monster_name as "Monster",
+		   encounter_hp_remaining as "HP Remaining"
+		   
+    FROM monsterencounter left join monster using (monster_id);
+
+
+DROP VIEW IF EXISTS monsterparty_details;
+CREATE VIEW monsterparty_details
+AS
+    SELECT monsterparty_id as "ID",
+		   monsterparty_location as "Location"
+		   
+    FROM monsterparty;
+
+
 -- DROP PROCEDURE IF EXISTS get_most_recent_uncommitted_pk_val_and_pk_colname;
 -- DELIMITER $$
 -- CREATE PROCEDURE get_most_recent_uncommitted_pk_val_and_pk_colname(in_table VARCHAR(255))

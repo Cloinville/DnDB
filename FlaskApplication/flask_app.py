@@ -100,7 +100,7 @@ def signup():
         
     return render_template('signup.html', error=error)
 
-
+@app.route('/')
 @app.route('/index')
 def index():
     # if logged_in_user == None:
