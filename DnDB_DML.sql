@@ -1244,6 +1244,9 @@ BEGIN
   DELETE FROM characterabilityscore WHERE 
     characterabilityscore.char_id = old.char_id;
 
+  DELETE FROM levelallocation WHERE 
+    levelallocation.char_id = old.char_id;
+
 END $$
 DELIMITER ;
 
