@@ -9,9 +9,17 @@
                     <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
                 </tr>
                 {% for alphanumeric_attr_with_datatype in alphanumeric_attr_list %}
+                    {% set print_name_pieces = alphanumeric_attr_with_datatype[0].split("_", 1)[1].split("_") %}
                 <tr>
                     <td>
-                        {{alphanumeric_attr_with_datatype[0]}} :
+                        <!-- {{print_name}} :  -->
+                        {% for word in print_name_pieces %}
+                            {% if word|length == 2 %}
+                                {{word|upper}}
+                            {% else %}
+                                {{word|title}}
+                            {% endif %}
+                        {% endfor %} :
                     </td>
                     <td>
                         <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" placeholder=""/>
@@ -19,9 +27,19 @@
                 </tr>
                 {% endfor %}
                 {% for enum_attr in enum_attr_list %}
+                    {% set print_name_pieces = enum_attr[0].split("_", 1)[1].split("_") %}
                 <tr>
                     <td>
-                        <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                        <!-- <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label> -->
+                        <label for={{enum_attr[0]}}>
+                            {% for word in print_name_pieces %}
+                                {% if word|length == 2 %}
+                                    {{word|upper}}
+                                {% else %}
+                                    {{word|title}}
+                                {% endif %}
+                            {% endfor %} :
+                        </label>
                     </td>
                     <td>
                         <select id={{enum_attr[0]}} name={{enum_attr[0]}}>
@@ -33,17 +51,36 @@
                 </tr>
                 {% endfor %}
                 {% for fk_set in fk_set_list %}
+                    {% if fk_set[0] == "dungeonmaster" %}
+                        {% set print_name_pieces = "Creator" %}
+                        {% set modify_name = "false" %}
+                    {% elif "_" not in fk_set[0] %}
+                        {% set print_name_pieces = fk_set[0]|title %}
+                        {% set modify_name = "false" %}
+                    {% else %}
+                        {% set print_name_pieces = fk_set[0].split("_", 1)[1].split("_") %}
+                        {% set modify_name = "true" %}
+                    {% endif %}
                 <tr>
                     <td>
-                        <label for={{fk_set[0]}}>{{fk_set[0]}} : </label>
+                        <!-- <label for={{fk_set[0]}}>{{fk_set[0]}} : </label> -->
+                        <label for={{fk_set[0]}}>
+                            {% if modify_name == "true" %}
+                                {% for word in print_name_pieces %}
+                                    {% if word|length == 2 %}
+                                        {{word|upper}}
+                                    {% else %}
+                                        {{word|title}}
+                                    {% endif %}
+                                {% endfor %} 
+                            {% else %}
+                                {{print_name_pieces}}
+                            {% endif %} :
+                        </label>
                     </td>
                     <td>
                         <select id={{fk_set[1]}} name={{fk_set[1]}}>
                             {% for fk_value_and_metadata in fk_set[2] %}
-                            <p>0: {{fk_value_and_metadata[0]}}</p>
-                            <p>1: {{fk_value_and_metadata[1]}}</p>
-                            <p>2: {{fk_value_and_metadata[2]}}</p>
-                            <p>3: {{fk_value_and_metadata[3]}}</p>
                             <option value={{fk_value_and_metadata[2]}}>{{fk_value_and_metadata[0]}}</option>
                             {% endfor %}
                         </select>

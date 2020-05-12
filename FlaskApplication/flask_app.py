@@ -448,7 +448,16 @@ def entity_details(entity, entity_id):
         else:
             print("UPDATED VALUE: KEY: {0}, VALUE: {1}".format(called_key, request.form[called_key]))
             # condition = "WHERE ID = '{0}'".format(entity_id)
-            execute_cmd("CALL update_field_in_record('{0}_details', '{1}', '{2}', '{3}')".format(entity, called_key, request.form[called_key], entity_id))
+            # TODO: if "_" in called_key, do on basic entity; else, do execute from here, w/"``" around key name
+            # TODO 5/11: TEST!
+            update_entity = entity
+            if "_" not in called_key:
+                update_entity = "{0}_details".format(entity)
+                update_value = request.form[called_key]
+                called_key = "`{0}`".format(called_key)
+                execute_cmd("UPDATE {0} SET {1} = {2} WHERE ID = {3}".format(update_entity, called_key, update_value, entity_id))
+            else:
+                execute_cmd("CALL update_field_in_record('{0}_details', '{1}', '{2}', '{3}')".format(entity, called_key, request.form[called_key], entity_id))
 
     chosen_entity = entity
 
@@ -518,7 +527,7 @@ def confirmed_level_up(char_id, class_id):
 
     level_up_character_in_db(char_id, class_id, new_hp, new_spells)
     
-    return redirect('/index')
+    return redirect(url_for('entity_details', entity="character", entity_id=char_id))
 
 @app.route('/delete_entity/<entity>/<delete_id>', methods=['POST', 'GET'])
 def delete_entity(entity,delete_id):
@@ -584,11 +593,13 @@ def player_login(username):
     return
 
 
+# 5/11 TODO: check that change worked
 def update_player_nickname(nickname):
     global logged_in_user_details
     player_id = logged_in_user_details['player_id']
 
-    successful_update = execute_field_update("player", "player_nickname", nickname, "WHERE player_id = {0}".format(player_id))
+    # successful_update = execute_field_update("player", "player_nickname", nickname, "WHERE player_id = {0}".format(player_id)) # entity, called_key, request.form[called_key], entity_id
+    successful_update = execute_field_update("player", "player_nickname", nickname, "{0}".format(player_id)) 
     if successful_update:
 
         updated_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_id = {0}".format(player_id))[0][0]
@@ -1310,7 +1321,7 @@ def execute_partial_transaction_cmd(cursor_cmd, cursor, multiple_args=True):
 
 def execute_field_update(entity, field, new_value, condition):
     try:
-        cmd = "CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition)
+        cmd = "CALL update_field_in_record('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition)
         # DEBUGGING
         print("FIELD UPDATE: {0}".format(cmd))
         # END DEBUGGING
@@ -1464,7 +1475,7 @@ def get_formatted_attribute_label(unformatted_label):
 
 def get_level_up_data_list(char_id, class_name):
     class_id = execute_cmd_and_get_result("SELECT class_id FROM class WHERE class_name = '{0}'".format(class_name))[0][0]
-    char_level = execute_cmd_and_get_result("SELECT count(*) FROM levelallocation WHERE char_id = '{0}'".format(char_id))[0][0]
+    char_level = execute_cmd_and_get_result("SELECT get_character_class_level('{0}', '{1}')".format(char_id, class_id))[0][0]
     spellslots_info = execute_cmd_and_get_result("CALL get_newspells_count_for_class_at_level('{0}', '{1}')".format(class_id, char_level + 1))
     spell_metadata_and_values_list = []
     if spellslots_info != []:
@@ -1473,7 +1484,7 @@ def get_level_up_data_list(char_id, class_name):
             if spellslots_info[i] > 0:
                 level_str = "{0}".format(i)
                 num_new_spells_of_level = spellslots_info[i]
-                spell_options_of_level = execute_cmd_and_get_result("CALL get_learnable_spells_for_character_of_class_at_level(''{0}', '{1}', '{2}')".format(char_id, class_id, i))
+                spell_options_of_level = execute_cmd_and_get_result("CALL get_learnable_spells_for_character_of_class_at_level('{0}', '{1}', '{2}')".format(char_id, class_id, i))
                 spell_metadata_and_values_list.append([level_str, num_new_spells_of_level, spell_options_of_level])
 
     hit_die_addition_str = execute_cmd_and_get_result("SELECT get_level_up_hp_calc_str_for_character('{0}', '{1}')".format(char_id, class_id))[0][0]
