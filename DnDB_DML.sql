@@ -234,88 +234,8 @@ BEGIN
 END $$
 DELIMITER ;
 
--- DROP VIEW IF EXISTS campaign_previews;
--- CREATE VIEW campaign_previews
--- AS
--- SELECT "campaign_id" as "identifier",
--- 	   campaign_id as "campaign_id", 
--- 	   campaign_name as "Campaign Name", 
---        party_name as "Adventuring Party", 
---        player_username as "DM"
--- FROM campaign JOIN adventuringparty USING(party_id) 
--- 			  JOIN dungeonmaster USING(dm_id) 
---               JOIN player USING(player_id);
---               
--- DROP VIEW IF EXISTS character_previews;
--- CREATE VIEW character_previews
--- AS
--- SELECT "char_id" as "identifier",
--- 	   char_id as "char_id", 
--- 	   char_name as "Name", 
---        race_name as "Race",
---        char_public_class as "Class",
---        player_username as "Played By"
--- FROM `character` JOIN player USING(player_id) 
--- 			     JOIN race USING(race_id);
---                  
--- DROP VIEW IF EXISTS monster_previews;
--- CREATE VIEW monster_previews
--- AS
--- SELECT "monster_id" as "identifier",
--- 	   monster_id as "monster_id", 
--- 	   monster_name as "Name", 
---        monster_type as "Type",
---        monster_challenge_rating as "Challenge Rating",
---        monster_base_hp as "Base HP"
--- FROM monster;
-
--- DROP VIEW IF EXISTS spell_previews;
--- CREATE VIEW spell_previews
--- AS
--- SELECT 'spell_id' as 'identifier',
--- 	   spell_id as 'spell_id', 
--- 	   spell_name as 'Name', 
---        magicschool_name as 'School of Magic',
---        spell_min_level as 'Spell Level'
--- FROM spell JOIN schoolofmagic USING(magicschool_id);
-
--- DROP VIEW IF EXISTS item_previews;
--- CREATE VIEW item_previews
--- AS
--- SELECT 'item.item_id' as 'identifier',
--- 	   item.item_id as 'item.item_id', 
--- 	   item_name as 'Name', 
---        item_rarity as 'Rarity',
---        item_type as 'Type'
--- FROM item LEFT JOIN weapon USING(item_id)
--- UNION
--- SELECT 'item_id' as 'identifier',
--- 	   item_id as 'item_id', 
--- 	   item_name as 'Name', 
---        item_rarity as 'Rarity',
---        item_type as 'Type'
--- FROM weapon LEFT JOIN item USING(item_id);
-
--- DROP VIEW IF EXISTS class_previews;
--- CREATE VIEW class_previews
--- AS
--- SELECT 'class_id' as 'identifier',
--- 	   class_id as 'class_id', 
--- 	   class_name as 'Name', 
---        class_role as 'Role'
--- FROM class;
-
--- DROP VIEW IF EXISTS race_previews;
--- CREATE VIEW race_previews
--- AS
--- SELECT 'race_id' as 'identifier',
--- 	   race_id as 'race_id', 
--- 	   race_name as 'Name',
---        race_size as 'Size',
---        race_speed as 'Speed'
--- FROM race;
-
 # This is still used - get_previews uses this to get which columns to return
+# TODO: redo so pulls from views, rather than having to re-do joins
 DROP FUNCTION IF EXISTS get_select_for_entity_previews;
 DELIMITER $$
 CREATE FUNCTION get_select_for_entity_previews(entity VARCHAR(255))
@@ -737,18 +657,26 @@ BEGIN
 END $$
 DELIMITER ;
 
+# Attempts to add the specified character as the character of the indicated player for the indicated campaign.
+# by either creating a new record - if no PartyMember record linking the campaign to the player exists -
+# or by updating the existing record for that corresponding PartyMember.
+# If no campaign ID is specified or the Character of the corresponding PartyMember is non-null, then
+# no action is taken.
 DROP PROCEDURE IF EXISTS conditional_partymember_record_insert_for_character;
 DELIMITER $$
 CREATE PROCEDURE conditional_partymember_record_insert_for_character(in_char_id VARCHAR(255), in_player_id VARCHAR(255), in_campaign_id VARCHAR(255))
 BEGIN
-	IF EXISTS (SELECT char_id FROM partymember WHERE campaign_id = in_campaign_id AND player_id = in_player_id)
+	IF in_campaign_id != ""
     THEN
-		IF (SELECT char_id FROM partymember WHERE campaign_id = in_campaign_id AND player_id = in_player_id) IS NULL
+		IF EXISTS (SELECT campaign_id FROM partymember WHERE campaign_id = in_campaign_id AND player_id = in_player_id)
 		THEN
-			UPDATE partymember SET char_id = in_char_id WHERE campaign_id = in_campaign_id AND player_id = in_player_id;
+			IF (SELECT char_id FROM partymember WHERE campaign_id = in_campaign_id AND player_id = in_player_id) IS NULL
+			THEN
+				UPDATE partymember SET char_id = in_char_id WHERE campaign_id = in_campaign_id AND player_id = in_player_id;
+			END IF;
+		ELSE
+			INSERT INTO partymember(campaign_id, player_id, char_id) VALUES(in_campaign_id, in_player_id, in_char_id);
 		END IF;
-	ELSE
-		INSERT INTO partymember(campaign_id, player_id, char_id) VALUES(in_campaign_id, in_player_id, in_char_id);
 	END IF;
 END $$
 DELIMITER ;
@@ -821,7 +749,8 @@ BEGIN
            	   curr_level.newspellscount_spell_slots_level_7 - prev_level.newspellscount_spell_slots_level_7 as "New Level 7",
            	   curr_level.newspellscount_spell_slots_level_8 - prev_level.newspellscount_spell_slots_level_8 as "New Level 8",
            	   curr_level.newspellscount_spell_slots_level_9 - prev_level.newspellscount_spell_slots_level_9 as "New Level 9"
-		FROM classlevelnewspellscount as prev_level JOIN curr_level ON prev_level.class_id = in_class_id AND prev_level.newspellscount_class_level = (SELECT in_level - 1);
+		FROM classlevelnewspellscount as prev_level JOIN curr_level ON prev_level.class_id = in_class_id 
+                                                                    AND prev_level.newspellscount_class_level = (SELECT in_level - 1);
 	END IF;
 END $$
 DELIMITER ;
@@ -848,9 +777,12 @@ BEGIN
 END $$
 DELIMITER ;
 
+# TODO: change so uses views instead
 DROP PROCEDURE IF EXISTS get_learnable_spells_for_character_of_class_at_level;
 DELIMITER $$
-CREATE PROCEDURE get_learnable_spells_for_character_of_class_at_level(in_char_id VARCHAR(255), in_class_id VARCHAR(255), in_class_level VARCHAR(255))
+CREATE PROCEDURE get_learnable_spells_for_character_of_class_at_level(in_char_id VARCHAR(255), 
+                                                                      in_class_id VARCHAR(255), 
+                                                                      in_class_level VARCHAR(255))
 BEGIN
 	IF in_class_level = 0
     THEN
@@ -877,6 +809,23 @@ BEGIN
 	DECLARE old_hp VARCHAR(255) DEFAULT "";
     SELECT IFNULL(char_base_hp, 0) INTO old_hp FROM `character` WHERE char_id = in_char_id;
     UPDATE `character` SET char_base_hp = in_new_hp + old_hp WHERE char_id = in_char_id;
+END $$
+DELIMITER ;
+
+DROP FUNCTION IF EXISTS get_character_class_level;
+DELIMITER $$
+CREATE FUNCTION get_character_class_level(in_char_id VARCHAR(255), in_class_id VARCHAR(255))
+RETURNS INT
+DETERMINISTIC
+BEGIN
+	DECLARE class_level INT DEFAULT NULL;
+    SELECT sum(`Levels`) INTO class_level FROM levelallocation_details WHERE ID = in_char_id AND class_id = in_class_id GROUP BY class_id LIMIT 1;
+    IF class_level IS NULL
+    THEN
+		RETURN 0;
+	ELSE
+		RETURN class_level;
+	END IF;
 END $$
 DELIMITER ;
 
@@ -1040,15 +989,16 @@ BEGIN
 	ELSEIF entity = "item"
     THEN
 		# 5/7 STUB
-        SELECT "NO" as "ID", 
+        SELECT "NO" as "ID",
+			   "NO" as "Name",
                "NO" as "Description", 
                "NO" as "Rarity", 
                "NO" as "Type", 
                "NO" as "Price", 
                "NO" as "Requires Attunement", 
-               "NO" as "Creator ID"
+               "NO" as "Creator"
         UNION ALL
-		SELECT * FROM item WHERE item_id = primary_key_value;
+		SELECT * FROM item_details WHERE ID = primary_key_value;
 	ELSEIF entity = "language"
     THEN
 		# 5/7 STUB
@@ -1070,6 +1020,7 @@ BEGIN
     THEN
 		# 5/7 STUB
         SELECT "NO" as "ID", 
+			   "NO" as "class_id",
 			   "NO" as "Class", 
                "NO" as "Levels"
         UNION ALL
@@ -1122,6 +1073,7 @@ BEGIN
 	ELSEIF entity = "monsterlootitem"
     THEN
 		SELECT "NO" as "ID", 
+			   "NO" as "Monster Name",
 			   "NO" as "item_id",
                "NO" as "Item"
         UNION ALL
@@ -1130,9 +1082,10 @@ BEGIN
     THEN
 		# 5/7 STUB
         SELECT "NO" as "ID", 
-			   "NO" as "Location"
+			   "NO" as "Location",
+               "NO" as "Campaign"
         UNION ALL
-		SELECT * FROM monsterparty WHERE monsterparty_id = primary_key_value;
+		SELECT * FROM monsterparty_details WHERE ID = primary_key_value;
 -- 	ELSEIF entity = "partymember"
 --     THEN
 -- 		# 5/7 STUB
@@ -1356,6 +1309,7 @@ DROP VIEW IF EXISTS levelallocation_details;
 CREATE VIEW levelallocation_details
 AS
     SELECT char_id as "ID",
+		   class_id as "class_id",
 		   class_name as "Class Name",
            levelallocation_level as "Levels"
     FROM levelallocation JOIN class USING(class_id);
@@ -1419,8 +1373,9 @@ DROP VIEW IF EXISTS monsterparty_details;
 CREATE VIEW monsterparty_details
 AS
     SELECT monsterparty_id as "ID",
-		   monsterparty_location as "Location"
-    FROM monsterparty;
+		   monsterparty_location as "Location",
+           campaign_name as "Campaign"
+    FROM monsterparty JOIN campaign USING(campaign_id);
     
 # 5/7 STUB
 DROP VIEW IF EXISTS player_partymember_details;
@@ -1478,6 +1433,20 @@ AS
 		   language_name as "Language"	
     FROM characterlearnedlanguage left join `character` using(char_id)	
 							      left join `language` using (language_id);
+
+# 5/11 with edits
+DROP VIEW IF EXISTS item_details;	
+CREATE VIEW item_details	
+AS	
+    SELECT item_id as "ID",
+		   item_name as "Name",	
+		   item_description  as "Description",	
+		   item_rarity as "Rarity",	
+		   item_type  as "Type",	
+		   item_price as "Price",	
+		   item_requires_attunement as "Requires Attunement",
+           `Display Name` as "Creator"
+    FROM item LEFT JOIN dungeonmaster_details ON item.dm_id = dungeonmaster_details.ID;	
     
 -- DROP VIEW IF EXISTS classlearnablespell_details;
 -- CREATE VIEW classlearnablespell_details
@@ -1556,6 +1525,30 @@ AS
 		   spell_is_concentration as "Concentration",	
 		   magicschool_name as "School of Magic"	
 	FROM spell left join schoolofmagic using(magicschool_id);
+		
+# Modified 5/11
+DROP VIEW IF EXISTS dungeonmaster_details;	
+CREATE VIEW dungeonmaster_details	
+AS	
+    SELECT dm_id as "ID",
+		   player_id as "player_id",
+           player_username as "Username",
+		   player_nickname as "Nickname",
+           CONCAT(player_nickname, ' (', player_username, ')') as "Display Name"
+    FROM dungeonmaster LEFT JOIN player USING (player_id);
+
+# TODO: maybe drop this, and use col in dungeonmaster_details instead
+DROP FUNCTION IF EXISTS get_dm_display_name;
+DELIMITER $$
+CREATE FUNCTION get_dm_display_name(in_dm_id VARCHAR(255))
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+	DECLARE display_name VARCHAR(255) DEFAULT NULL;
+	SELECT CONCAT(`Nickname`, ' (', `Username`, ')') INTO display_name FROM dungeonmaster_details WHERE ID = in_dm_id LIMIT 1;
+    RETURN display_name;
+END $$
+DELIMITER ;
 
 # TODO: TEST!
 DROP TRIGGER IF EXISTS characterinventoryitem_autoincrement;
