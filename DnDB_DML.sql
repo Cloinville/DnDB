@@ -894,7 +894,8 @@ BEGIN
 		       allow_edits as "Name", 
 			   "NO" as "Player",
 		       allow_edits as "Gender",
-               "NO" as "Level", 
+               "NO" as "Level",
+               "NO" as "Level Allocations",
                "NO" as "Race", 
                "NO" as "Speed", 
                "NO" as "Size", 
@@ -915,7 +916,6 @@ BEGIN
     THEN
         SELECT
 				"NO" as "ID",
-                "NO" as "Character",
                 "NO" as "ability_id",
                 "NO" as "Ability",
                 "NO" as "Score"
@@ -924,8 +924,7 @@ BEGIN
 	ELSEIF entity = "characterinventoryitem"
     THEN
 		# 5/7 STUB
-		SELECT "NO" as "ID", 
-			   "NO" as "Name",
+		SELECT "NO" as "ID",
                "NO" as "item_id",
                "NO" as "Item",
                "NO" as "Counter" # TODO: Delete this from view
@@ -934,8 +933,7 @@ BEGIN
 	ELSEIF entity = "characterlearnedlanguage"
     THEN
 		# 5/7 STUB
-		SELECT "NO" as "ID", 
-			   "NO" as "Character",
+		SELECT "NO" as "ID",
                "NO" as "language_id",
                "NO" as "Language"
         UNION ALL
@@ -953,8 +951,7 @@ BEGIN
 	ELSEIF entity = "classlearnablespell"
     THEN
 		# 5/7 STUB
-        SELECT "NO" as "ID", 
-			   "NO" as "Class", 
+        SELECT "NO" as "ID",
                "NO" as "spell_id",
                "NO" as "Spell",
                "NO" as "Required Class Level"
@@ -1010,8 +1007,7 @@ BEGIN
 	ELSEIF entity = "learnedspell"
     THEN
 		# 5/7 STUB
-        SELECT "NO" as "ID", 
-               "NO" as "Name", 
+        SELECT "NO" as "ID",
                "NO" as "spell_id",
                "NO" as "Spell"
         UNION ALL
@@ -1046,8 +1042,7 @@ BEGIN
 	ELSEIF entity = "monsterabilityscore"
     THEN
 		# 5/7 STUB
-        SELECT "NO" as "ID", 
-			   "NO" as "Monster", 
+        SELECT "NO" as "ID",
                "NO" as "ability_id", 
                "NO" as "Ability", 
                "NO" as "Score"
@@ -1065,6 +1060,7 @@ BEGIN
     THEN
 		# 5/7 STUB
         SELECT "NO" as "ID", 
+			   "NO" as "encounter_id",
 			   "NO" as "Monster Name", 
                "YES" as "HP Remaining", 
                "NO" as "Loot Items"
@@ -1072,9 +1068,8 @@ BEGIN
 		SELECT * FROM monsterparty_monsterencounter_details WHERE ID = primary_key_value;
 	ELSEIF entity = "monsterlootitem"
     THEN
-		SELECT "NO" as "ID", 
-			   "NO" as "Monster Name",
-			   "NO" as "item_id",
+		SELECT "NO" as "ID",
+               "NO" as "item_id",
                "NO" as "Item"
         UNION ALL
         SELECT * FROM monsterlootitem_details WHERE ID = primary_key_value;
@@ -1101,7 +1096,10 @@ BEGIN
 	ELSEIF entity = "character_partymember"
     THEN
 		# 5/7 STUB
-        SELECT "NO", "NO"
+        SELECT "NO" as "ID", 
+               "NO" as "campaign_id",
+               "NO" as "Campaign",
+               "NO" as "DM"
         UNION ALL
         SELECT * FROM character_partymember_details WHERE ID = primary_key_value;
 	ELSEIF entity = "player"
@@ -1127,8 +1125,8 @@ BEGIN
     THEN
 		# 5/7 STUB
         SELECT "NO" as "ID", 
-			   "NO" as "Race", 
                "NO" as "race_id",
+               "NO" as "Ability",
                "NO" as "Score"
         UNION ALL
         SELECT * FROM raceabilityscoremodifier_details WHERE ID = primary_key_value;
@@ -1192,7 +1190,8 @@ AS
 		   char_name as "Name", 
 		   player_nickname as "Player",
 		   char_gender as "Gender",
-           char_overall_level as "Level", 
+           char_overall_level as "Level",
+           group_concat(CONCAT(class_name, ": ", levelallocation_level) SEPARATOR", ") as "Level Allocation",
            race_name as "Race", 
            race_speed as "Speed", 
            race_size as "Size", 
@@ -1208,7 +1207,10 @@ AS
            char_silver as "Silver", 
            char_copper as "Copper"
     FROM `character` JOIN race USING(race_id) 
-		             JOIN player USING(player_id);
+		             JOIN player USING(player_id)
+                     LEFT JOIN levelallocation USING(char_id)
+                     LEFT JOIN class USING(class_id) 
+                     GROUP BY char_id;
     
 DROP VIEW IF EXISTS monster_details;
 CREATE VIEW monster_details
@@ -1258,18 +1260,17 @@ DROP VIEW IF EXISTS characterabilityscore_details;
 CREATE VIEW characterabilityscore_details
 AS
     SELECT char_id as "ID",	
-		   ability_id,	
+		   ability_id as "ability_id",	
 		   ability_name as "Ability",	
 		   charabilityscore_value as "Score"	
     FROM characterabilityscore left join ability using(ability_id)	
 							   left join `character` using (char_id);
 
-# 5/10 Colin's Version
+# 5/11 Updated
 DROP VIEW IF EXISTS characterinventoryitem_details;	
 CREATE VIEW characterinventoryitem_details	
 AS	
     SELECT char_id as "ID",	
-		   char_name as "Name",	
 		   item_id,	
 		   item_name as "Item",	
 		   characterinventoryitem_counter	
@@ -1295,14 +1296,6 @@ AS
 --     SELECT char_id as "ID",
 -- 		   language_name as "Language Name"
 --     FROM characterlearnedlanguage JOIN `language` USING(language_id);
-
-# 5/7 STUB
-DROP VIEW IF EXISTS learnedspell_details;
-CREATE VIEW learnedspell_details
-AS
-    SELECT char_id as "ID",
-		   spell_name as "Spell Name"
-    FROM learnedspell JOIN spell USING(spell_id);
     
 # 5/7 STUB
 DROP VIEW IF EXISTS levelallocation_details;
@@ -1316,7 +1309,7 @@ AS
 
 # 5/7 STUB
 DROP VIEW IF EXISTS monsterabilityscore_details;
-	CREATE VIEW monsterabilityscore_details	
+CREATE VIEW monsterabilityscore_details	
 AS	
     SELECT monster_id as "ID",	
 		   ability_id,	
@@ -1339,6 +1332,7 @@ DROP VIEW IF EXISTS monsterparty_monsterencounter_details;
 CREATE VIEW monsterparty_monsterencounter_details
 AS
 	SELECT monsterparty_id as "ID",
+		   encounter_id as "encounter_id",
 		   monster_name as "Monster Name",
 		   encounter_hp_remaining as "HP Remaining",
            group_concat(item_name ORDER BY item_name SEPARATOR', ') as "Loot Items"
@@ -1357,14 +1351,13 @@ AS
            encounter_hp_remaining as "HP Remaining"
 	FROM monsterencounter JOIN monster USING(monster_id);
 
-# 5/10 Colin's Version
+# 5/11 Updated
 DROP VIEW IF EXISTS monsterlootitem_details;	
 CREATE VIEW monsterlootitem_details	
 AS	
     SELECT encounter_id as "ID",	
 		   item_id,	
-		   item_name as "Item",	
-		   monsterlootitem_counter	
+		   item_name as "Item"	
     FROM monsterlootitem left join item using (item_id)	
 						 left join monsterencounter using (encounter_id);
                          
@@ -1386,31 +1379,40 @@ AS
            char_name as "Character Name"
     FROM partymember JOIN player USING(player_id) LEFT JOIN `character` USING(char_id);
 
+-- # 5/10 TODO: check if this messes stuff up
+-- DROP VIEW IF EXISTS character_partymember_details;
+-- CREATE VIEW character_partymember_details
+-- AS
+--     SELECT char_id as "ID",
+--            campaign_name as "Campaign Name",
+-- 	       partymember.player_id,	
+-- 		   player_nickname as "Player",	
+--            partymember.char_id,	
+-- 		   char_name as "Character"		
+--     FROM partymember left join player using (player_id)	
+-- 					 left join `character` using (char_id)	
+-- 					 left join campaign using (campaign_id);
+
 # 5/10 TODO: check if this messes stuff up
 DROP VIEW IF EXISTS character_partymember_details;
 CREATE VIEW character_partymember_details
 AS
     SELECT char_id as "ID",
-           campaign_name as "Campaign Name",
-	       partymember.player_id,	
-		   player_nickname as "Player",	
-           partymember.char_id,	
-		   char_name as "Character"		
-    FROM partymember left join player using (player_id)	
-					 left join `character` using (char_id)	
-					 left join campaign using (campaign_id);
+           campaign_id,
+	       campaign_name as "Campaign",
+           `Display Name` as "DM"
+    FROM partymember JOIN campaign USING (campaign_id)
+		             JOIN dungeonmaster_details ON campaign.dm_id = dungeonmaster_details.ID;
 
-# 5/10 Colin's Version
+# 5/11 Updated
 DROP VIEW IF EXISTS raceabilityscoremodifier_details;	
 CREATE VIEW raceabilityscoremodifier_details	
 AS	
-    SELECT race_id as "ID",	
-		   race_name as "Race",	
+    SELECT race_id as "ID",
 		   ability_id,	
 		   ability_name as "Ability",	
            racemodifier_value as "Score"	
-    FROM raceabilityscoremodifier left join ability using(ability_id)	
-							   	  left join race using (race_id);
+    FROM raceabilityscoremodifier JOIN ability USING(ability_id);
 
 # 5/10 Colin's Version
 DROP VIEW IF EXISTS raceknownlanguage_details;	
@@ -1423,13 +1425,12 @@ AS
     FROM raceknownlanguage left join race using(race_id)	
 						   left join `language` using (language_id);
 
-# 5/10 Colin's Version
+# 5/11 Updated
 DROP VIEW IF EXISTS characterlearnedlanguage_details;	
 CREATE VIEW characterlearnedlanguage_details	
 AS	
     SELECT char_id as "ID",	
-		   char_name as "Character",	
-		   language_id,	
+		   language_id as "language_id",	
 		   language_name as "Language"	
     FROM characterlearnedlanguage left join `character` using(char_id)	
 							      left join `language` using (language_id);
@@ -1476,28 +1477,24 @@ AS
 		   newspellscount_spell_slots_level_9 as "Spell Slot Level 9"	
 	FROM classlevelnewspellscount left join class using (class_id);
 
-# 5/10 Colin's Version
+# 5/11 Updated
 DROP VIEW IF EXISTS classlearnablespell_details;	
 CREATE VIEW classlearnablespell_details	
 AS	
-    SELECT class_id as "ID",	
-		   class_name as "Class",	
-		   spell_id,	
+    SELECT class_id as "ID",
+           spell_id,	
 		   spell_name as "Spell",	
 		   cls_required_class_level as "Required Level"	
-    FROM classlearnablespell left join class using(class_id)	
-						   left join spell using (spell_id);
+    FROM classlearnablespell left join spell using (spell_id);
 
-# 5/10 Colin's Version
+# 5/11 updated, but check if actually need left joins of 5/10 Colin's Version
 DROP VIEW IF EXISTS learnedspell_details;	
 CREATE VIEW learnedspell_details	
 AS	
     SELECT char_id as "ID",	
-		   char_name  as "Name",	
 		   spell_id,	
 		   spell_name as "Spell"	
-    FROM learnedspell left join `character` using (char_id)	
-					  left join spell using (spell_id);
+    FROM learnedspell JOIN spell USING (spell_id);
 
 # 5/10 Colin's Version
 DROP VIEW IF EXISTS levelallocation_details;	
@@ -1547,6 +1544,31 @@ BEGIN
 	DECLARE display_name VARCHAR(255) DEFAULT NULL;
 	SELECT CONCAT(`Nickname`, ' (', `Username`, ')') INTO display_name FROM dungeonmaster_details WHERE ID = in_dm_id LIMIT 1;
     RETURN display_name;
+END $$
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS delete_record_in_table;
+DELIMITER $$
+CREATE PROCEDURE delete_record_in_table(in_table VARCHAR(255), in_conditions TEXT, delete_multi BOOLEAN)
+BEGIN
+	DECLARE delete_limit_condition VARCHAR(255) DEFAULT "";
+    DECLARE order_by_condition VARCHAR(255) DEFAULT "";
+    IF delete_multi = 0
+    THEN
+		SET delete_limit_condition = " LIMIT 1";
+            IF in_table = "monsterlootitem"
+			THEN
+				SET order_by_condition = " ORDER BY monsterlootitem_counter DESC";
+			ELSEIF in_table = "characterinventoryitem"
+			THEN
+				SET order_by_condition = " ORDER BY characterinventoryitem_counter DESC";
+			END IF;
+	END IF;
+    
+    SET @query = CONCAT("DELETE FROM ", in_table, " ", in_conditions, order_by_condition, delete_limit_condition);
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
 END $$
 DELIMITER ;
 

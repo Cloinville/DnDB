@@ -16,7 +16,12 @@ default_dropdown_str = ""
 searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill']
 # creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
 creatable_entities = ['character', 'campaign', 'monsterparty']
-# add try-except for db
+associative_entity_redirects = { 'characterabilityscore' : 'ability', 'characterinventoryitem' : "item", 'characterlearnedlanguage' : 'language', 'character_partymember' : 'campaign',
+                                 'classlearnablespell' : 'spell', 'learnedspell' : 'spell', 'levelallocation' : 'class', 'monsterabilityscore' : 'ability',
+                                 'monsterencounter' : 'monsterencounter', 'monsterlootitem' : 'item', 'partymember' : 'character', 
+                                 'raceabilityscoremodifier' : 'ability', 'raceknownlanguage' : 'language'
+                               }
+# character_view_attr_conversions = {'ID' : 'char_id', 'Name' : 'char_name', 'Player' : 'player_nickname', 'Gender' : 'char_gender'}
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -424,35 +429,90 @@ def entity_details(entity, entity_id):
         return redirect('/login')
     
     if request.method == "POST":
+        method = None
         called_key = None
         for key in request.form:
-            # DEBUGGING
-            print("ENTITY DETAILS: KEY, VALUE: {0}, {1}".format(key, request.form[key]))
-            # END DEBUGGING
             if key.startswith("updatebtn_"):
+                # DEBUGGING
+                print("KEY: {0}".format(key))
+                # END DEBUGGING
                 called_key = key[len("updatebtn_"):]
+                method = "update"
                 break
             elif key.startswith("levelupbtn"):
+                # DEBUGGING
+                print("KEY: {0}".format(key))
+                # END DEBUGGING
                 called_key = key
+                method = "levelup"
                 break
+            elif key.startswith("deletebtn_"):
+                print("KEY: {0}".format(key))
+                called_key = key[len("deletebtn_"):]
+                method = "delete"
+                break
+            elif key.startswith("addbtn_"):
+                print("KEY: {0}".format(key))
+                called_key = key[len("addbtn_"):]
+                method = "add"
+                break
+            else:
+                # # DEBUGGING
+                print("ENTITY DETAILS: KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+                # END DEBUGGING
         
         if called_key == None:
             print("NO UPDATE CALLED FOR ENTITY")
-        elif called_key == "levelupbtn":
+        elif method == "levelup":
             return redirect(url_for('level_up', char_id=request.form[called_key]))
-        else:
+        elif method == "delete":
+            #5/11 TODO: handle this...
+            # 1. split on "_DELETEFOR_": [0] -> delete_tbl, [1] -> second condition
+            # 2. If associative entity (in keys of associative_sources or w/e), then get second condition:
+            #       1. get pk name of class
+            #       2. condition = "WHERE {0}_id={1} AND {2}".format(prefix_of_class, entity_id, second_cond)
+            print("METHOD: delete - {0}".format(called_key))
+        elif method == "add":
+            #TODO: handle this...
+            print("METHOD: add - {0}".format(called_key))
+        elif method == "update":
             print("UPDATED VALUE: KEY: {0}, VALUE: {1}".format(called_key, request.form[called_key]))
             # condition = "WHERE ID = '{0}'".format(entity_id)
             # TODO: if "_" in called_key, do on basic entity; else, do execute from here, w/"``" around key name
             # TODO 5/11: TEST!
-            update_entity = entity
+            # update_entity = entity
+            # working with a view, if no "_" in key
+            update_cmd = ""
+
             if "_" not in called_key:
-                update_entity = "{0}_details".format(entity)
                 update_value = request.form[called_key]
-                called_key = "`{0}`".format(called_key)
-                execute_cmd("UPDATE {0} SET {1} = {2} WHERE ID = {3}".format(update_entity, called_key, update_value, entity_id))
+                called_key = called_key.replace("-", " ")
+
+                if entity == "character" or entity == "monsterparty":
+                    # need to convert back to base table, since unupdatable view due to stored aggregate info
+                    prefix = ""
+                    if entity == "character":
+                        prefix = "char"
+                    else:
+                        prefix = "monsterparty"
+                    
+                    called_key = "{0}_{1}".format(prefix, called_key.replace(" ", "_").lower())
+                    update_cmd = "UPDATE `{0}` SET {1} = '{2}' WHERE {3}_id = {4}".format(entity, called_key, update_value, prefix, entity_id)
+                else:
+                    update_entity = "{0}_details".format(entity)
+                    called_key = "`{0}`".format(called_key)
+                    update_cmd = "UPDATE {0} SET {1} = '{2}' WHERE ID = {3}".format(update_entity, called_key, update_value, entity_id)
+                    # DEBUGGING
+                    # print("UPDATE CALLING: {0}".format(update_cmd))
+                    # END DEBUGGING
+                    # execute_cmd(update_cmd)
             else:
-                execute_cmd("CALL update_field_in_record('{0}_details', '{1}', '{2}', '{3}')".format(entity, called_key, request.form[called_key], entity_id))
+                update_cmd = "CALL update_field_in_record('{0}_details', '{1}', '{2}', '{3}')".format(entity, called_key, request.form[called_key], entity_id)
+            
+            # DEBUGGING
+            print("UPDATING ON COMMAND: {0}".format(update_cmd))
+            # END DEBUGGING
+            execute_cmd(update_cmd)
 
     chosen_entity = entity
 
@@ -523,6 +583,11 @@ def confirmed_level_up(char_id, class_id):
     level_up_character_in_db(char_id, class_id, new_hp, new_spells)
     
     return redirect(url_for('entity_details', entity="character", entity_id=char_id))
+
+
+@app.route('/redirect_entity/<associative_class_name>/<entity_id>')
+def redirect_entity(associative_class_name, entity_id):
+    return redirect(url_for('entity_details', entity=associative_entity_redirects[associative_class_name], entity_id=entity_id))
 
 
 def connect(in_user=None):
@@ -661,19 +726,33 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
         # END DEBUGGING
 
         min_end_index = min(min(len(attr_datatype_list), len(curr_record_values)), len(readonly_info))
+        link_info_index = 0
+        associative_id_name = ""
+
+        if min_end_index >= 2 and "_id" in attr_datatype_list[1][0]:
+            link_info_index = 1
+            associative_id_name = attr_datatype_list[1][0]
 
         link_info = []
         # If reformat ID info as link, do so (guaranteed to be first entry in record); else, skip entirely
         if prep_id_as_link:
             # safety check
-            for i in range(0, min(min_end_index, 1)):
+            # SAVED OLD FUNCTIONING VERSION 5/11:
+            # for i in range(0, min(min_end_index, 1)):
+            #     link_entity = chosen_entity
+            #     if chosen_entity == "monsterparty_monsterencounter":
+            #         link_entity = "monsterencounter"
+
+            #     link_info = [link_entity, curr_record_values[i]]
+
+            for i in range(link_info_index, min(min_end_index, link_info_index + 1)):
                 link_entity = chosen_entity
                 if chosen_entity == "monsterparty_monsterencounter":
                     link_entity = "monsterencounter"
 
-                link_info = [link_entity, curr_record_values[i]]
+                link_info = [link_entity, associative_id_name, curr_record_values[i]]
 
-        for i in range(1, min_end_index):
+        for i in range(link_info_index + 1, min_end_index):
         # for attr_set in attr_datatype_list:
             attr_name = attr_datatype_list[i][0]
             attr_datatype = attr_datatype_list[i][1]

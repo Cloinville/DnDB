@@ -38,14 +38,20 @@
             <table class="basevals_tbl">
                 {% for record in alphanumeric_attr_list %}
                     {% for alphanumeric_attr_with_datatype in record %}
+                        {% set keyable_attr_name = alphanumeric_attr_with_datatype[0] | replace(" ", "-") %}
                         <tr>
                             <td>
                                 {{alphanumeric_attr_with_datatype[0]}} : 
                             </td>
                             <td>
-                                <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
+                                {% if alphanumeric_attr_with_datatype[2] | int >= 2048 %}
+                                    <textarea name="{{keyable_attr_name}}" pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" {{alphanumeric_attr_with_datatype[3]}}>{{alphanumeric_attr_with_datatype[4]}}</textarea>
+                                {% else %}
+                                    <!-- <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}> -->
+                                    <input type="text" name={{keyable_attr_name}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}>
+                                {% endif %}
                                 {% if alphanumeric_attr_with_datatype[3] != "readonly" %}
-                                    <input type="submit" name="updatebtn_{{alphanumeric_attr_with_datatype[0]}}" value="&#128190;">
+                                    <input type="submit" name="updatebtn_{{keyable_attr_name}}" value="&#128190;">
                                 {% endif %}
                             </td>
                         </tr>
@@ -91,15 +97,32 @@
                             {% set associative_alphanumeric_vals_and_info = direct_attr_set[1] %}
                             {% set associative_enum_vals_and_info = direct_attr_set[2] %}
 
+                            {% set included_link = "false" %}
+                            {% set associative_link = "" %}
+                            {% if associative_link_info|length >= 2 %}
+                                {% set associative_link = url_for('redirect_entity', associative_class_name=associative_link_info[0], entity_id=associative_link_info[2]) %}
+                                {% set associative_delete_btn_name = "deletebtn_" ~ associative_link_info[0] ~ "_DELETEFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %}
+                                <!-- {% set associative_add_btn_name = "addbtn_" ~ associative_link_info[0] ~ "_ADDFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %} -->
+                            {% endif %}
+                            <p> LINK: {{associative_link}}</p>
+
+                            <!-- <p> ASSOCIATIVE LINK INFO: {{associative_link_info}}</p> -->
+
                             <!-- In theory, if could pass correct ID value to associative_link_info from get_alphanum_enum...._for_details, could make link 
                                 However, getting/passing this is not currently supported in the Views, making this impossible -->
                             <tr> <!-- Row per associative item type ie. direct_attr_set -->
                                 <td>
                                     <table class="directassociativevals_tbl">
+                                        <p> LINK: {{associative_link}}</p>
                                         {% for alphanumeric_attr_with_datatype in associative_alphanumeric_vals_and_info %}
                                             <tr>
                                                 <td>
-                                                    {{alphanumeric_attr_with_datatype[0]}} : 
+                                                    {% if included_link == "false" %}
+                                                        <a href="{{associative_link}}">{{alphanumeric_attr_with_datatype[0]}} : </a>
+                                                        {% set included_link = "true" %}
+                                                    {% else %}
+                                                        {{alphanumeric_attr_with_datatype[0]}} : 
+                                                    {% endif %}
                                                 </td>
                                                 <td>
                                                     <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
@@ -126,9 +149,9 @@
                                         {% endfor %}
                                     </table>
                                 </td>
-                                {% if associative_link_info[0] != "characterabilityscore" %}
+                                {% if associative_link_info[0] != "characterabilityscore" and associative_link_info[0] != "monsterabilityscore" %} <!-- And is Page Owner -->
                                     <td>
-                                        <input type="submit" name="deletebtn_{{associative_link_info[0]}}_DELETEFOR_{{associative_link_info[1]}}" value="DELETE">
+                                        <input type="submit" name="{{associative_delete_btn_name}}" value="DELETE">
                                     </td>
                                 {% endif %}
                             </tr>
@@ -136,6 +159,7 @@
                         </table>
                     </form>
                     <!-- Form for direct additions ie. single -->
+                    <!-- TODO: if is page owner -->
                     <form action="" method="POST" autocomplete="off">
                         <table class="directattrtemplate_tbl">
 
@@ -225,15 +249,30 @@
                             {% set associative_link_info = multilinked_attr_set[0] %}
                             {% set associative_alphanumeric_vals_and_info = multilinked_attr_set[1] %}
                             {% set associative_enum_vals_and_info = multilinked_attr_set[2] %}
+
+                            {% set associative_link = url_for('redirect_entity', associative_class_name=associative_link_info[0], entity_id=associative_link_info[2]) %}
+                            {% set associative_delete_btn_name = "deletebtn_" ~ associative_link_info[0] ~ "_DELETEFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %}
+                            <!-- {% set associative_add_btn_name = "addbtn_" ~ associative_link_info[0] ~ "_ADDFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %} -->
+                            <!-- <p> LINK: {{associative_link_info}} </p> -->
                             <tr>
                                 <td>
                                     <table class="multilinkedassociativedirectvals_tbl">
                                         <!-- In theory, could set link to associative entity, if had ID of that entity, but again this is not currently supported -->
-
+                                        {% set included_link = "false" %}
+                                        {% set associative_link = "" %}
+                                        {% if associative_link_info|length >= 2 %}
+                                            {% set associative_link = url_for('redirect_entity', associative_class_name=associative_link_info[0], entity_id=associative_link_info[1]) %}
+                                        {% endif %}
+                                        <p> LINK: {{associative_link}}</p>
                                         {% for alphanumeric_attr_with_datatype in associative_alphanumeric_vals_and_info %}
                                             <tr>
                                                 <td>
-                                                    {{alphanumeric_attr_with_datatype[0]}} : 
+                                                    {% if included_link == "false" %}
+                                                        <a href="{{associative_link}}">{{alphanumeric_attr_with_datatype[0]}} : </a>
+                                                        {% set included_link = "true" %}
+                                                    {% else %}
+                                                        {{alphanumeric_attr_with_datatype[0]}} : 
+                                                    {% endif %}
                                                 </td>
                                                 <td>
                                                     <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
@@ -261,12 +300,15 @@
                                     </table>
                                 </td>
                                 <td>
-                                    <input type="submit" name="deletebtn_{{associative_link_info[0]}}_DELETEFOR_{{associative_link_info[1]}}" value="DELETE">
+                                    <!-- TODO: If are page owner -->
+                                    <!-- <input type="submit" name="deletebtn_{{associative_link_info[0]}}_DELETEFOR_{{associative_link_info[1]}}" value="DELETE"> -->
+                                    <input type="submit" name="{{associative_delete_btn_name}}" value="DELETE">
                                 </td>
                             </tr>
                         {% endfor %}
                         </table>
                     </form>
+                    <!-- TODO: if are page owner -->
                     <form action="" method="POST" autocomplete="off">
                         <table class="multilinked_attr_template_tbl">
 
