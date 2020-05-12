@@ -4,11 +4,18 @@ import mysql.connector
 import yaml
 import re
 import json
+from jinja2.ext import Extension
 
 app = Flask(__name__)
 
 # configure db
 connection_values = yaml.load(open('db.yaml'))
+# add file path (make sure this file is there on repo is eric test locally)
+
+# Jinja_env changes
+env = app.jinja_env
+env.add_extension('jinja2.ext.do')
+
 logged_in_user_details = {'username': None, 'nickname': None, 'player_id': None, 'dm_id': None}
 # logged_in_user = None
 # logged_in_user_nickname = ""
@@ -588,6 +595,36 @@ def confirmed_level_up(char_id, class_id):
 @app.route('/redirect_entity/<associative_class_name>/<entity_id>')
 def redirect_entity(associative_class_name, entity_id):
     return redirect(url_for('entity_details', entity=associative_entity_redirects[associative_class_name], entity_id=entity_id))
+
+
+# Delete full base entity
+@app.route('/delete_entity/<entity>/<delete_id>', methods=['POST', 'GET'])
+def delete_entity(entity,delete_id):
+    if entity == "character":
+        try:
+            commandString = 'DELETE FROM `' + entity + '` WHERE char_id = ' + delete_id
+            execute_cmd(commandString)
+        except:
+            print("Could not delete entity")
+    
+    elif entity == "campaign":
+        try:
+            commandString = ("DELETE FROM " + entity + " WHERE campaign_id = " + delete_id)
+            execute_cmd(commandString)
+        except:
+            print("Could not delete entity")
+    
+    elif entity == "monsterparty":
+        try:
+            commandString = ("DELETE FROM " + entity + " WHERE monsterparty_id = " + delete_id)
+            execute_cmd(commandString)
+        except:
+            print("Could not delete entity")
+    
+    else:
+        print("Invalid Entity provided")
+    
+    return redirect('/index')
 
 
 def connect(in_user=None):

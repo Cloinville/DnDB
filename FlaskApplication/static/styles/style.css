@@ -460,6 +460,19 @@ input[readonly]{
     margin-top: 25px;
 }
 
+.delete_btn button{
+    background-color: rgb(209, 26, 42);
+    border-radius: 10;
+    font-size: 24px;
+    margin-left: auto;
+    margin-right:auto;
+    height: 70px;
+    width: 150px;
+    border: 2px solid rgb(0, 0, 0);
+    margin-bottom: 25px;
+    margin-top: 25px;
+}
+
 .levelup_btn button:hover{
     background-color:white;
     color:black;

@@ -32,12 +32,17 @@
             </div>
         </header>
         <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Details</h1>
+        {% set can_edit = [] %}
         <form action="" method="POST" autocomplete="off">
             <!-- Input below is a hidden field used to pass the chosen_entity value to the search_result page -->
             <input type="text" name="chosen_entity" value={{chosen_entity}} style="display:none"/>
             <table class="basevals_tbl">
                 {% for record in alphanumeric_attr_list %}
                     {% for alphanumeric_attr_with_datatype in record %}
+                        {% if alphanumeric_attr_with_datatype[-2] == "YES" %}
+                            {% do can_edit.append(1) %}
+                        {% endif %}
+                         
                         {% set keyable_attr_name = alphanumeric_attr_with_datatype[0] | replace(" ", "-") %}
                         <tr>
                             <td>
@@ -374,6 +379,13 @@
                 <form action="{{url_for('level_up', char_id=entity_id)}}">
                     <button>Level Up!</button>
                 </form>
+            </div>
+        {% endif %}
+        {% if can_edit %}
+            <div class="delete_btn">
+                <form action="{{url_for('delete_entity', entity=chosen_entity, delete_id=entity_id)}}">
+                    <button>Delete {{chosen_entity}}</button>
+                </form>            
             </div>
         {% endif %}
         <script src="../../static/jquery-3.5.0.js"></script>
