@@ -522,25 +522,24 @@ def confirmed_level_up(char_id, class_id):
 
 @app.route('/delete_entity/<entity>/<delete_id>', methods=['POST', 'GET'])
 def delete_entity(entity,delete_id):
-    print(entity)
-    print(delete_id)
-    db = connect()
-    cursor = db.cursor()
     if entity == "character":
-        # try:
-        cursor.execute("DELETE FROM `" + entity + "` WHERE char_id = " + delete_id)
-        # except:
-        #     print("Could not delete entity")
+        try:
+            commandString = 'DELETE FROM `' + entity + '` WHERE char_id = ' + delete_id
+            execute_cmd(commandString)
+        except:
+            print("Could not delete entity")
     
     elif entity == "campaign":
         try:
-            cursor.execute("DELETE FROM " + entity + " WHERE campaign_id = " + delete_id)
+            commandString = ("DELETE FROM " + entity + " WHERE campaign_id = " + delete_id)
+            execute_cmd(commandString)
         except:
             print("Could not delete entity")
     
     elif entity == "monsterparty":
         try:
-            cursor.execute("DELETE FROM " + entity + " WHERE monsterparty_id = " + delete_id)
+            commandString = ("DELETE FROM " + entity + " WHERE monsterparty_id = " + delete_id)
+            execute_cmd(commandString)
         except:
             print("Could not delete entity")
     
