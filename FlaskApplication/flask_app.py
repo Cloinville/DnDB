@@ -4,6 +4,7 @@ import mysql.connector
 import yaml
 import re
 import json
+from jinja2.ext import Extension
 
 app = Flask(__name__)
 
@@ -17,6 +18,10 @@ searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill']
 # creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
 creatable_entities = ['character', 'campaign', 'monsterparty']
 # add try-except for db
+
+#Jinja_env changes
+env = app.jinja_env
+env.add_extension('jinja2.ext.do')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -515,6 +520,35 @@ def confirmed_level_up(char_id, class_id):
     
     return redirect('/index')
 
+@app.route('/delete_entity/<entity>/<delete_id>', methods=['POST', 'GET'])
+def delete_entity(entity,delete_id):
+    print(entity)
+    print(delete_id)
+    db = connect()
+    cursor = db.cursor()
+    if entity == "character":
+        # try:
+        cursor.execute("DELETE FROM `" + entity + "` WHERE char_id = " + delete_id)
+        # except:
+        #     print("Could not delete entity")
+    
+    elif entity == "campaign":
+        try:
+            cursor.execute("DELETE FROM " + entity + " WHERE campaign_id = " + delete_id)
+        except:
+            print("Could not delete entity")
+    
+    elif entity == "monsterparty":
+        try:
+            cursor.execute("DELETE FROM " + entity + " WHERE monsterparty_id = " + delete_id)
+        except:
+            print("Could not delete entity")
+    
+    else:
+        print("Invalid Entity provided")
+    
+    return redirect('/index')
+    
 
 def connect(in_user=None):
     if in_user == None:
