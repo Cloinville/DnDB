@@ -1,6 +1,6 @@
 <html>
     <head>
-        <title> DnDB Campaigns </title>
+        <title> DnDB Homepage </title>
         <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
     </head>
     <body>
@@ -31,24 +31,26 @@
                 </div>
             </div>
         </header>
-        <h1 class="page_title">My Campaigns</h1>
-        <div class="campaign_previews">
-            {% if campaign_previews == None %}
-            <p>No campaigns found</p>
-            {% else %}
-                            {% for preview in campaign_previews %}
-                                <form action="{{url_for('entity_details', entity=preview[0], entity_id=preview[2][1])}}">
-                                    <div class="preview-item">
-                                        <button name="{{preview[0]}}_btn" value="{{preview[2][0]}}={{preview[2][1]}}">
-                                            <h1>{{preview[0]}}</h1>
-                                            {% for col_and_val in preview[3] %}
-                                                <p>{{col_and_val[0]}} : {{col_and_val[1]}}</p>
-                                            {% endfor %}
-                                        </button>
-                                    </div>
-                                </form>
-                                {% endfor %}
-                </div>
-            {% endif %}
+        <h1 class="page_title">Level Up!</h1>
+        <form action="" method="POST">
+            <label for="entity">Choose a class: </label>
+            <select id="classes" name="chosen_class">
+                {% for class in classes %}
+                    {% if class == chosen_class %}
+                        <option name="class" value="{{class}}" selected>{{class}}</option>
+                    {% else %}
+                        <option name="class" value="{{class}}">{{class}}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <input type=submit value="Select Class">
+        </form>
+        {% if level_up_details_link != None %}
+        <iframe src="{{url_for('level_up_details', chosen_class=chosen_class, char_id=char_id)}}"
+                name="search_template"
+                height="50%"
+                width="100%">
+        </iframe>
+        {% endif %}
     </body>
 </html>

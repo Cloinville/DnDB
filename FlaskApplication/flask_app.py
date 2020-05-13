@@ -4,11 +4,12 @@ import mysql.connector
 import yaml
 import re
 import json
+from jinja2.ext import Extension
 
 app = Flask(__name__)
 
 # configure db
-connection_values = yaml.load(open('db.yaml'))
+connection_values = yaml.load(open('db.yaml')) # add file path (make sure this file is there on repo is eric test locally)
 logged_in_user_details = {'username': None, 'nickname': None, 'player_id': None, 'dm_id': None}
 # logged_in_user = None
 # logged_in_user_nickname = ""
@@ -16,8 +17,11 @@ default_dropdown_str = ""
 searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill']
 # creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
 creatable_entities = ['character', 'campaign', 'monsterparty']
-
 # add try-except for db
+
+#Jinja_env changes
+env = app.jinja_env
+env.add_extension('jinja2.ext.do')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -145,17 +149,11 @@ def profile():
             else:
                 update_player_nickname(nickname)
 
-    # username = logged_in_user
-    # nickname = logged_in_user_nickname
-    # username = logged_in_user_details['username']
-    # nickname = logged_in_user_details['nickname']
-
     return render_template('profile.html', error=error, logged_in_user_details=logged_in_user_details)
 
 
 @app.route('/premium', methods=['GET', 'POST'])
 def premium():
-    # if logged_in_user == None:
     if logged_in_user_details['username'] == None:
         return redirect('/login')
 
@@ -179,9 +177,13 @@ def my_campaigns():
         return redirect(url_for('campaign_details', campaign_id=campaign_id))
 
     # Otherwise, render page with campaign previews
-    campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}')".format(logged_in_user_details['username']))
+    unformatted_campaign_preview_details = execute_cmd_and_get_result("CALL get_campaign_previews('{0}', '{1}')".format(logged_in_user_details['player_id'], logged_in_user_details['dm_id']))
+    
+    campaign_previews = get_formatted_previews_and_metadata_list(unformatted_campaign_preview_details)
 
-    return render_template('my_campaigns.html', campaign_preview_details=campaign_preview_details, logged_in_user_details=logged_in_user_details)
+    print("\nCAMPAIGN PREVIEWS: {0}\n".format(campaign_previews))
+
+    return render_template('my_campaigns.html', campaign_previews=campaign_previews, logged_in_user_details=logged_in_user_details)
 
 
 # TODO: 4/25: actually implement
@@ -324,7 +326,7 @@ def create_details(entity):
             if error == None:
                 return redirect(url_for('entity_details', entity=chosen_entity, entity_id = new_id))
             else:
-                # do error handling
+                # TODO: do error handling
                 error = True
 
     chosen_entity = entity
@@ -415,25 +417,7 @@ def search_result():
         # columns = execute_cmd_and_get_result("CALL get_all_column_names('{0}')".format(chosen_entity))
 
         records_and_metadata = get_formatted_previews_and_metadata_list(results)
-        # records = []
-        # num_cols = len(columns)
 
-        # for result in results:
-        #     curr_col_and_val = []
-        #     end_index = min(len(result), num_cols)
-        #     for i in range(0, end_index):
-        #         curr_col_and_val.append([columns[i][0], result[i]])
-        #     records.append(curr_col_and_val)
-
-        # print("COLS AND VALS: ")
-        # for col_and_val in records:
-        #     print("1: {0}".format(col_and_val))
-
-        # if len(records) == 0:
-        #     records = None
-
-    # search_fields = session.pop('search_fields', [])
-    # return render_template('search_result', search_fields=search_fields)
     return render_template('search_result.html', records_and_metadata=records_and_metadata, logged_in_user_details=logged_in_user_details)
 
 
@@ -442,17 +426,136 @@ def search_result():
 def entity_details(entity, entity_id):
     if logged_in_user_details['username'] == None:
         return redirect('/login')
+    
+    if request.method == "POST":
+        called_key = None
+        for key in request.form:
+            # DEBUGGING
+            print("ENTITY DETAILS: KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+            # END DEBUGGING
+            if key.startswith("updatebtn_"):
+                called_key = key[len("updatebtn_"):]
+                break
+            elif key.startswith("levelupbtn"):
+                called_key = key
+                break
+        
+        if called_key == None:
+            print("NO UPDATE CALLED FOR ENTITY")
+        elif called_key == "levelupbtn":
+            return redirect(url_for('level_up', char_id=request.form[called_key]))
+        else:
+            print("UPDATED VALUE: KEY: {0}, VALUE: {1}".format(called_key, request.form[called_key]))
+            # condition = "WHERE ID = '{0}'".format(entity_id)
+            # TODO: if "_" in called_key, do on basic entity; else, do execute from here, w/"``" around key name
+            # TODO 5/11: TEST!
+            update_entity = entity
+            if "_" not in called_key:
+                update_entity = "{0}_details".format(entity)
+                update_value = request.form[called_key]
+                called_key = "`{0}`".format(called_key)
+                execute_cmd("UPDATE {0} SET {1} = {2} WHERE ID = {3}".format(update_entity, called_key, update_value, entity_id))
+            else:
+                execute_cmd("CALL update_field_in_record('{0}_details', '{1}', '{2}', '{3}')".format(entity, called_key, request.form[called_key], entity_id))
 
     chosen_entity = entity
 
-    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, entity_id)
+    alphanumeric_attr_list, enum_attr_list, all_attr_lists = get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, entity_id)
 
     # TODO: get for associative attributes that already exist in table
 
-    direct_attr_list_template, multilinked_attr_list_template = get_dynamic_associative_attr_lists_for_create(chosen_entity, True)
+    direct_attr_list_values_and_templates, multilinked_attr_list_values_and_templates = get_associative_attr_lists_for_entity_details(chosen_entity, entity_id, True)
 
-    return render_template('entity_details.html', chosen_entity = chosen_entity, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, direct_attr_list=direct_attr_list_template, multilinked_attr_list=multilinked_attr_list_template, logged_in_user_details=logged_in_user_details)
+    return render_template('entity_details.html', chosen_entity = chosen_entity, entity_id=entity_id, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, all_attr_lists=all_attr_lists, direct_attr_list=direct_attr_list_values_and_templates, multilinked_attr_list=multilinked_attr_list_values_and_templates, logged_in_user_details=logged_in_user_details)
 
+
+@app.route('/level_up/<char_id>', methods=['POST', 'GET'])
+def level_up(char_id):
+    if logged_in_user_details['username'] == None:
+        return redirect('/login')
+
+    unformatted_classes = execute_cmd_and_get_result("SELECT class_name FROM class")
+    classes = [curr_class[0] if len(curr_class) >= 1 else curr_class for curr_class in unformatted_classes]
+    chosen_class = classes[0]
+
+    level_up_details_link = None
+    if request.method == "POST":
+        if "chosen_class" in request.form:
+            chosen_class = request.form["chosen_class"]
+            level_up_details_link = ""
+        else:
+            print("LEVEL UP BASE: ")
+            for key in request.form:
+                print("KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+
+    return render_template('level_up.html', char_id=char_id, chosen_class=chosen_class, classes=classes, level_up_details_link=level_up_details_link, logged_in_user_details=logged_in_user_details)
+
+
+@app.route('/level_up_details/<chosen_class>/<char_id>', methods=['GET', 'POST'])
+def level_up_details(chosen_class, char_id):
+    # get hit die for class
+    # get consitution modifier AND current overall level of character
+    # get as static-dropdowns spell options
+    print("LEVEL UP DETAILS: Class, Char ID: {0}, {1}".format(chosen_class, char_id))
+    if request.method == 'POST':
+        print("LEVEL UP DETAILS POST")
+        for key in request.form:
+            print("KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+    else:
+        print("GET IN level_up_details!")
+        class_id, hit_die_str, spell_metadata_and_values_list = get_level_up_data_list(char_id, chosen_class)
+        # TODO: generate lists from char_id and chosen_class
+    print("LEVEL UP DETAILS: Class_ID, hit_die_str, spell_metadata_and_values_list: {0}, {1}, {2}".format(class_id, hit_die_str, spell_metadata_and_values_list))
+
+    return render_template('level_up_details.html', hit_die_str=hit_die_str, spell_metadata_and_values_list=spell_metadata_and_values_list, char_id=char_id, class_id=class_id)
+
+
+@app.route('/confirmed_level_up/<char_id>/<class_id>', methods=['GET', 'POST'])
+def confirmed_level_up(char_id, class_id):
+    new_hp = ""
+    new_spells = []
+
+    for key in request.form:
+        print("CONFIRMED LEVEL UP - KEY, VALUE: {0}, {1}".format(key, request.form[key]))
+        value = request.form[key]
+        if key == "hit_die_str":
+            new_hp = value
+        elif key.startswith("new_spell_level_"):
+            # javascript validates no repeats of spells, so can just append
+            new_spells.append(value)
+
+    level_up_character_in_db(char_id, class_id, new_hp, new_spells)
+    
+    return redirect(url_for('entity_details', entity="character", entity_id=char_id))
+
+@app.route('/delete_entity/<entity>/<delete_id>', methods=['POST', 'GET'])
+def delete_entity(entity,delete_id):
+    if entity == "character":
+        try:
+            commandString = 'DELETE FROM `' + entity + '` WHERE char_id = ' + delete_id
+            execute_cmd(commandString)
+        except:
+            print("Could not delete entity")
+    
+    elif entity == "campaign":
+        try:
+            commandString = ("DELETE FROM " + entity + " WHERE campaign_id = " + delete_id)
+            execute_cmd(commandString)
+        except:
+            print("Could not delete entity")
+    
+    elif entity == "monsterparty":
+        try:
+            commandString = ("DELETE FROM " + entity + " WHERE monsterparty_id = " + delete_id)
+            execute_cmd(commandString)
+        except:
+            print("Could not delete entity")
+    
+    else:
+        print("Invalid Entity provided")
+    
+    return redirect('/index')
+    
 
 def connect(in_user=None):
     if in_user == None:
@@ -489,11 +592,13 @@ def player_login(username):
     return
 
 
+# 5/11 TODO: check that change worked
 def update_player_nickname(nickname):
     global logged_in_user_details
     player_id = logged_in_user_details['player_id']
 
-    successful_update = execute_field_update("player", "player_nickname", nickname, "WHERE player_id = {0}".format(player_id))
+    # successful_update = execute_field_update("player", "player_nickname", nickname, "WHERE player_id = {0}".format(player_id)) # entity, called_key, request.form[called_key], entity_id
+    successful_update = execute_field_update("player", "player_nickname", nickname, "{0}".format(player_id)) 
     if successful_update:
 
         updated_nickname = execute_cmd_and_get_result("SELECT player_nickname FROM player WHERE player_id = {0}".format(player_id))[0][0]
@@ -530,7 +635,7 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs=True)
 
         # If an enum, convert all of the allowed values into a list, and associate list w/attr name
         if "enum" in attr_datatype:
-            enum_vals = attr_datatype.split("enum")[1][1:-1].split(",")
+            enum_vals = [enum_val[1:-1] if enum_val[0] == "'" and enum_val[len(enum_val) - 1] == "'" else enum_val for enum_val in attr_datatype.split("enum")[1][1:-1].split(",")]
             enum_vals.insert(0, default_dropdown_str)
             enum_attr_list.append([attr_name, enum_vals])
         else:
@@ -542,7 +647,7 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs=True)
 
 
 # TODO - combine this with above function once figure out clean way to do so
-def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, id_val, include_text_attrs=True):
+def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, id_val, prep_id_as_link=False, include_text_attrs=True):
     # TODO: modify DB end so not need to include "_details" in this call, but auto selects from details panel instead? => ISSUE: lose foreign key info...
     attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}_details')".format(chosen_entity))
 
@@ -558,91 +663,96 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
         # DEBUGGING
         print("UH - OH: TERMINATED VALUE COLLECTION PREMATURELY")
         # END DEBUGGING
-        return None, None
+        # TODO: maybe change the returns back to Nones
+        return [], [], []
     
-    readonly_info, values = values_with_readonly_information
+    readonly_info = values_with_readonly_information.pop(0)
+    all_record_values = values_with_readonly_information
 
-    # List format: [(name, datatype, readonly, value), (name, datatype, readonly, value), ...]
-    alphanumeric_attr_list = []
+    # 5/7 TODO: account for possibility of multiple sets of values inside of values, not just vals for only one record!
 
-    # List format: [(name, (allowed_val, allowed_val,...), readonly, value), (name, (allowed_val, allowed_val, ...), readonly, value)]
-    enum_attr_list = []
+    # readonly_info, values = values_with_readonly_information
+
+    # For alphanum and enum lists, each full list set at upper most level correspond to a single record
+    # List format: [ [(name, datatype, readonly, value), (name, datatype, readonly, value), ...], [(name, datatype, readonly, value), (name, datatype, readonly, value), ...], ... ]
+    all_records_alphanumeric_attr_list = []
+
+    # List format: [ [(name, (allowed_val, allowed_val,...), readonly, value), (name, (allowed_val, allowed_val, ...), readonly, value)], [(name, (allowed_val, allowed_val,...), readonly, value), (name, (allowed_val, allowed_val, ...), readonly, value)], ...]
+    all_records_enum_attr_list = []
+
+    all_records_values_and_attr_lists = []
 
     # Parse through all local attributes received, distinguishing enums from all other types
     # do range truncation to be safe, but shouldn't be possible to get mismatch
-    for i in range(0, min(min(len(attr_datatype_list), len(values)), len(readonly_info))):
-    # for attr_set in attr_datatype_list:
-        attr_name = attr_datatype_list[i][0]
-        attr_datatype = attr_datatype_list[i][1]
-        attr_readonly = readonly_info[i]
-        attr_value = values[i]
+    for curr_record_values in all_record_values:
+        alphanumeric_attr_list = []
+        enum_attr_list = []
 
-        # If an enum, convert all of the allowed values into a list, and associate list w/attr name
-        if "enum" in attr_datatype:
-            enum_vals = [enum_val[1:-1] if enum_val[0] == "'" and enum_val[len(enum_val) - 1] == "'" else enum_val for enum_val in attr_datatype.split("enum")[1][1:-1].split(",")]
-            # enum_vals.insert(0, default_dropdown_str)
-            if attr_readonly.lower() == "no":
-                attr_readonly = "disabled"
-            enum_attr_list.append([attr_name, enum_vals, attr_readonly, attr_value])
-        else:
-            if "text" not in attr_datatype or include_text_attrs:
-                attr_datatype_html_pattern, attr_datatype_html_length = convert_mysql_datatype_to_html_datatype(attr_datatype)
+        # DEBUGGING
+        print("GET ALPHA AND ENUM VALUES FOR DETAILS: CURR RECORD: {0}".format(curr_record_values))
+        # END DEBUGGING
+
+        min_end_index = min(min(len(attr_datatype_list), len(curr_record_values)), len(readonly_info))
+
+        link_info = []
+        # If reformat ID info as link, do so (guaranteed to be first entry in record); else, skip entirely
+        if prep_id_as_link:
+            # safety check
+            for i in range(0, min(min_end_index, 1)):
+                link_entity = chosen_entity
+                if chosen_entity == "monsterparty_monsterencounter":
+                    link_entity = "monsterencounter"
+
+                link_info = [link_entity, curr_record_values[i]]
+
+        for i in range(1, min_end_index):
+        # for attr_set in attr_datatype_list:
+            attr_name = attr_datatype_list[i][0]
+            attr_datatype = attr_datatype_list[i][1]
+            attr_readonly = readonly_info[i]
+            attr_value = curr_record_values[i]
+
+            # If an enum, convert all of the allowed values into a list, and associate list w/attr name
+            # TODO: check this, since seems like wouldn't work with current setup?? Since aren't combining the two
+            if "enum" in attr_datatype:
+                enum_vals = [enum_val[1:-1] if enum_val[0] == "'" and enum_val[len(enum_val) - 1] == "'" else enum_val for enum_val in attr_datatype.split("enum")[1][1:-1].split(",")]
+                # enum_vals.insert(0, default_dropdown_str)
                 if attr_readonly.lower() == "no":
-                    attr_readonly = "readonly"
-                alphanumeric_attr_list.append([attr_name, attr_datatype_html_pattern, attr_datatype_html_length, attr_readonly, attr_value])
+                    attr_readonly = "disabled"
+                enum_attr_list.append([attr_name, enum_vals, attr_readonly, attr_value])
+            else:
+                if "text" not in attr_datatype or include_text_attrs:
+                    attr_datatype_html_pattern, attr_datatype_html_length = convert_mysql_datatype_to_html_datatype(attr_datatype)
+                    if attr_readonly.lower() == "no":
+                        attr_readonly = "readonly"
+                    alphanumeric_attr_list.append([attr_name, attr_datatype_html_pattern, attr_datatype_html_length, attr_readonly, attr_value])
+        
+        all_records_alphanumeric_attr_list.append(alphanumeric_attr_list)
+        all_records_enum_attr_list.append(enum_attr_list)
+        all_records_values_and_attr_lists.append([link_info, alphanumeric_attr_list, enum_attr_list])
 
     # DEBUGGING
-    print("ALPHANUM ATTR LIST: {0}".format(alphanumeric_attr_list))
-    print("ENUM ATTR LIST: {0}".format(enum_attr_list))
+    print("ALPHANUM ATTR LIST: {0}".format(all_records_alphanumeric_attr_list))
+    print("ENUM ATTR LIST: {0}".format(all_records_enum_attr_list))
+    print("COMBO ATTR LIST: {0}".format(all_records_values_and_attr_lists))
     # END DEBUGGING
 
-    return alphanumeric_attr_list, enum_attr_list
+    return all_records_alphanumeric_attr_list, all_records_enum_attr_list, all_records_values_and_attr_lists
 
 
-# def get_fk_set_list(chosen_entity, include_creator):
-#     foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(chosen_entity))
-    
-#     # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
-#     fk_set_list = []
+# TODO: possibly add fk_condition to this function and db-side function, to allow limiting of fk vals returned
+def get_fk_set_list(base_entity, include_creator, associative_entity=None, add_defaults=True, add_creator_condition=False):
+    # DEBUGGING
+    print("\nGET FK SETS: params - base entity: '{0}', include_creator: '{1}', associative_entity: '{2}', add_defaults: '{3}', associative entity != None: {4}".format(base_entity, include_creator, associative_entity, add_defaults, associative_entity != None))
+    # END DEBUGGING
 
-#     # For each foreign table that the base table references (given as pair: foreign key col name in base table, referenced table name)
-#     for pair in foreign_key_names_and_tables:
-#         local_fk_name = pair[0]
-#         referenced_table = pair[1]
-
-#         # TODO 5/3: check that addition at end of line didn't break functionality
-#         is_creator_reference = (local_fk_name.lower() == "player_id" and chosen_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and chosen_entity == 'monsterencounter')
-
-#         if include_creator or not is_creator_reference:
-#             # Get the display and identification information for all records in that table
-#             referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
-        
-#             # If there were records in the table
-#             if len(referenced_table_record_names_and_metadata) > 0:
-
-#                 # Save the name of the fk column for use in searching later
-#                 foreign_key_col_name = referenced_table_record_names_and_metadata[0][3]
-
-#                 # Insert a dummy entry, to have a "no selection" option for dropdowns
-#                 referenced_table_record_names_and_metadata.insert(0, [default_dropdown_str, "", "", ""])
-            
-#                 # Add a new entry into the traversable set of all foreign key value dropdowns: table name, fk column name, records with embedded fk value options
-#                 fk_set_list.append([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
-            
-#                 # DEBUGGING
-#                 # print([referenced_table, foreign_key_col_name, referenced_table_record_names_and_metadata])
-#                 # END DEBUGGING
-
-#     return fk_set_list
-
-
-# TODO: possibly combine this into meatier version of function above
-def get_fk_set_list(base_entity, include_creator, associative_entity=None, add_defaults=True):
-    foreign_key_names_and_tables = None
+    entity_to_call_on = None
     if associative_entity != None:
-        foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(associative_entity))
+        entity_to_call_on = associative_entity
     else:
-        foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(base_entity))
+        entity_to_call_on = base_entity
+
+    foreign_key_names_and_tables = execute_cmd_and_get_result("CALL get_foreign_key_column_names_and_referenced_table_names('{0}')".format(entity_to_call_on))
     
     # List format: [(foreign_table, fk_column_in_foreign_table, (fk_display_name, how display name was generated, fk value, fk col name in foreign table))]
     fk_set_list = []
@@ -659,10 +769,20 @@ def get_fk_set_list(base_entity, include_creator, associative_entity=None, add_d
         else:
             is_creator_reference = (local_fk_name.lower() == "player_id" and base_entity == "character") or (local_fk_name.lower() == "dm_id") or (local_fk_name.lower() == 'monsterparty_id' and base_entity == 'monsterencounter')
 
-
         if include_creator or not is_creator_reference:
             # Get the display and identification information for all records in that table
-            referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
+            referenced_table_record_names_and_metadata = None
+
+            if entity_to_call_on == "partymember" and referenced_table == "campaign":
+                referenced_table_record_names_and_metadata = execute_cmd_and_get_result("CALL get_display_vals_for_fk_records_with_member_condition('{0}')".format(logged_in_user_details['player_id']))
+            elif add_creator_condition:
+                referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table_created_by_current_user(referenced_table)
+            else:
+                referenced_table_record_names_and_metadata = get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(referenced_table)
+        
+            # DEBUGGING
+            print("FK SET LIST: TABLE NAMES AND METADATA - \n ----------------- \n {0} \n ------------------ \n".format(referenced_table_record_names_and_metadata))
+            # END DEBUGGING
         
             # If there were records in the table
             if len(referenced_table_record_names_and_metadata) > 0:
@@ -701,6 +821,7 @@ def get_dynamic_associative_attr_lists_for_create(entity, allow_recursion):
         linking_table = trio[0]
         associated_table = trio[1]
         fk_in_associated_table = trio[2]
+
         # get display names for curr_table
         # decide if is dynamic/not based on some condition
         # if static, hard get all poss values and set as text fields/ w/e
@@ -708,19 +829,29 @@ def get_dynamic_associative_attr_lists_for_create(entity, allow_recursion):
 
         # only character class delays some of its returned associated creations
         if entity == 'character' or entity == 'monster':
-            if associated_table == "ability":
+            if associated_table == "ability" or associated_table == "campaign":
+                associative_type = ""
+                add_defaults = False
+
+                if associated_table == "ability":
+                    associative_type = "static-list"
+                else:
+                    associative_type = "static-dropdown"
+                    add_defaults = True
                 # static => collect all values and make into input text fields
                 # 1. get all unique instances w/display name
                 # 2. get datatype
                 # 3. append: (associative_table_name, associated_table_name, [(associated_table_fk_name, associated_fk_val, associated_display_name)])
-                attr_vals = get_fk_set_list(entity, False, linking_table, False)
-                attr_vals_and_table_data = ["static", linking_table, attr_vals]
+                attr_vals = get_fk_set_list(entity, False, linking_table, add_defaults)
+                attr_vals_and_table_data = [associative_type, linking_table, attr_vals]
                 dynamic_attr_list.append(attr_vals_and_table_data)
 
             elif associated_table == "language":
                 attr_vals = get_fk_set_list(entity, False, linking_table, False)
                 attr_vals_and_table_data = ["dynamic", linking_table, attr_vals]
                 dynamic_attr_list.append(attr_vals_and_table_data)
+            
+            # 5/7 TODO: add for partymember
 
         elif entity == 'monsterparty':
             # ([monsterencounter, monster, (monster vals)], [lootitem, item, (item vals)])
@@ -753,6 +884,8 @@ def get_dynamic_associative_attr_lists_for_create(entity, allow_recursion):
 
     # DEBUGGING
     print("\n CALLER: {2} >> DYNAMIC: {0} - MULTILINKED: {1}".format(len(dynamic_attr_list), len(multilinked_dynamic_attr_list), entity))
+    print("\n DYNAMIC: {0}".format(dynamic_attr_list))
+    print("\n MULTILINKED: {0}".format(multilinked_dynamic_attr_list))
     # if len(multilinked_dynamic_attr_list) > 0:
     #     print("MULTILINKED[0][1]: {0}".format(multilinked_dynamic_attr_list[0][1]))
     # for i in range(0, min(10, len(dynamic_attr_list))):
@@ -762,6 +895,126 @@ def get_dynamic_associative_attr_lists_for_create(entity, allow_recursion):
     #         # print("MULTILINKED: '{0}'".format(multilinked_dynamic_attr_list[i]))
     #         print("\nHAVE MULTILINKED")
     # END DEBUGGING
+
+    return dynamic_attr_list, multilinked_dynamic_attr_list
+
+
+# TODO: figure out clean way to combine this w/function above
+def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recursion):
+
+    associated_table_names_and_fkcol_names = execute_cmd_and_get_result("CALL get_associated_table_and_fkcol_names_for_create('{0}')".format(entity))
+    # [(dynamic/fixed, table to insert into, linked_table_name, [(displayvals), (displayvals), ...])]
+    dynamic_attr_list = []
+
+    # [[table to insert into, linked_table_name, [(displayvals), (displayvals), ...]], [table to insert into for other table to insert into, linked_table_name, [(displayvals), (displayvals), ...]],...)
+    multilinked_dynamic_attr_list = []
+
+    for trio in associated_table_names_and_fkcol_names:
+        linking_table = trio[0]
+        associated_table = trio[1]
+        fk_in_associated_table = trio[2]
+
+        preexisting_vals_calling_entity = linking_table
+        if linking_table == "partymember":
+            if entity == "campaign":
+                preexisting_vals_calling_entity = "player_partymember"
+            else:
+                preexisting_vals_calling_entity = "character_partymember"
+        elif linking_table == "monsterencounter" and associated_table == "monsterencounter" and entity == "monsterparty":
+            preexisting_vals_calling_entity = "monsterparty_monsterencounter"
+
+        # DEBUGGING
+        print("RETRIEVING PRE-EXISTING VALS; LINKING: {0} - ASSOCIATED: {1}".format(linking_table, associated_table))
+        # END DEBUGGING
+
+        # TODO: if not allow recursion, don't collect preexisting vals, since waste of time and resources
+        preexisting_alphanumeric_metadata_and_values = []
+        preexisting_enum_metadata_and_values = []
+        preexisting_alphaenum_metadata_and_values = []
+
+        if allow_recursion:
+            preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, preexisting_alphaenum_metadata_and_values = get_alphanumeric_and_enum_attr_lists_with_values_for_details(preexisting_vals_calling_entity, entity_id, True)
+
+        # only character class delays some of its returned associated creations
+        if entity == 'character' or entity == 'monster':
+            associative_relationship_type = "dynamic"
+
+            if associated_table == "ability":
+                # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
+                dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, []])
+            # 5/7 TODO: if associated_table == "partymember" AND there does not exist preexisting value, then do static-dropdown
+            elif associated_table == "campaign":
+                # DEBUGGING
+                print("GET ASSOCIATIVES FOR DETAILS: PREEXISTING: \n alphanum: \n {0} \n enum: \n {1} \n all: {2}".format(preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, preexisting_alphaenum_metadata_and_values))
+                # END DEBUGGING
+                # 
+                # Characters can only be in one campaign: only add ability to add a campaign if not already have one
+                # if len(preexisting_alphanumeric_metadata_and_values) == 0:
+                if len(preexisting_alphaenum_metadata_and_values) <= 0 or len(preexisting_alphaenum_metadata_and_values[0][1]) == 0:
+                    attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, True)
+                    attr_vals_and_metadata_for_dynamic_additions = ["static-dropdown", linking_table, attr_vals_for_dynamic_additions]
+                    # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                    dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                else:
+                    # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, []])
+                    dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, []])
+            else:
+            # # If ability, need to collect existing values ONLY, not template;
+            # # for any other table, collect both existing values and template
+            # if associated_table == "ability":
+            #     associative_relationship_type = "static"
+            # else:
+            #     associative_relationship_type = "dynamic"
+            #     # static => collect all values and make into input text fields
+            #     # 1. get all unique instances w/display name
+            #     # 2. get datatype
+            #     # 3. append: (associative_table_name, associated_table_name, [(associated_table_fk_name, associated_fk_val, associated_display_name)])
+                attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, False)
+                attr_vals_and_metadata_for_dynamic_additions = [associative_relationship_type, linking_table, attr_vals_for_dynamic_additions]
+                # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+
+            # elif associated_table == "language":
+            #     attr_vals = get_fk_set_list(entity, False, linking_table, False)
+            #     attr_vals_and_table_data = ["dynamic", linking_table, attr_vals]
+            #     dynamic_attr_list.append(attr_vals_and_table_data)
+
+        elif entity == 'monsterparty':
+            # ([monsterencounter, monster, (monster vals)], [lootitem, item, (item vals)])
+            if associated_table == 'monsterencounter':
+                print("\n\nAS INTENDED: link = {0}".format(linking_table))
+                direct_fk_set_list = get_fk_set_list(entity, False, linking_table, False)
+
+                # direct_attr_vals_and_table_data = ["dynamic", linking_table, direct_fk_set_list]
+                
+                if allow_recursion:
+                    indirect_dynamic_attrs, indirect_multi_attrs = get_associative_attr_lists_for_entity_details(associated_table, entity_id, False)
+                    # big yikes
+
+                    # indirect_attr_vals_and_table_data = indirect_dynamic_attrs
+
+                    # multilinked_dynamic_attr_list.append([direct_attr_vals_and_table_data, indirect_attr_vals_and_table_data])
+                    direct_fk_set_list.append(indirect_dynamic_attrs)
+                    multilinked_attr_vals_and_metadata_for_dynamic_additions = ["dynamic", linking_table, direct_fk_set_list]
+                    # multilinked_dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, multilinked_attr_vals_and_metadata_for_dynamic_additions])
+                    multilinked_dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, multilinked_attr_vals_and_metadata_for_dynamic_additions])
+                else:
+                    # this probably doesn't work at all
+                    # DEBUGGING
+                    print("THIS SHOULDN'T HAPPEN AND IF IT DOES, WE HAVE A PROBLEM")
+                    # END DEBUGGING
+                    attr_vals_and_metadata_for_dynamic_additions = ["dynamic", linking_table, direct_fk_set_list]
+                    # dynamic_attr_list.extend([preexisting_enum_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+                    dynamic_attr_list.extend([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+        else:
+            # aside from monsters with ability scores, no other entity has a static attr list
+            attr_vals_for_dynamic_additions = get_fk_set_list(entity, False, linking_table, False)
+            attr_vals_and_metadata_for_dynamic_additions = ["dynamic", linking_table, attr_vals_for_dynamic_additions]
+            # dynamic_attr_list.append([preexisting_alphanumeric_metadata_and_values, preexisting_enum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+            dynamic_attr_list.append([preexisting_alphaenum_metadata_and_values, attr_vals_and_metadata_for_dynamic_additions])
+
+    # DEBUGGING
+    print("\n CALLER: {2} >> DYNAMIC: {0} - MULTILINKED: {1}".format(len(dynamic_attr_list), len(multilinked_dynamic_attr_list), entity))
 
     return dynamic_attr_list, multilinked_dynamic_attr_list
 
@@ -823,17 +1076,27 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
 
         for single_level_association in single_level_associations:
             if single_level_association[0].startswith("static"):
-                parsed_list = get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(single_level_association[0])
+                parsed_list = None
+                if single_level_association[0].startswith("static-dropdown"):
+                    parsed_list = get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(single_level_association[1])
+                else:
+                    parsed_list = get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(single_level_association[0])
                 print("SINGLE - STATIC: {0}".format(parsed_list))
 
                 curr_entity = parsed_list[0]
-                curr_col_list_str = "{0},{1}".format(saved_base_pk_name, parsed_list[1])
-                curr_val_list_str = "'{0}','{1}','{2}'".format(saved_base_pk_val, parsed_list[2], single_level_association[1])
 
-                curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
-                print("STATIC INSERT CMD: {0}".format(curr_cmd))
+                if curr_entity == "partymember" and chosen_entity == "character":
+                    # 5/7 TODO: CHECK THIS! \/
+                    curr_cmd = "CALL conditional_partymember_record_insert_for_character('{0}', '{1}', '{2}')".format(saved_base_pk_val, logged_in_user_details['player_id'], parsed_list[2])
+                    execute_partial_transaction_cmd(curr_cmd, cursor)
+                else:
+                    curr_col_list_str = "{0},{1}".format(saved_base_pk_name, parsed_list[1])
+                    curr_val_list_str = "'{0}','{1}','{2}'".format(saved_base_pk_val, parsed_list[2], single_level_association[1])
 
-                execute_partial_transaction_cmd(curr_cmd, cursor)
+                    curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
+                    print("STATIC INSERT CMD: {0}".format(curr_cmd))
+
+                    execute_partial_transaction_cmd(curr_cmd, cursor)
             else:
                 parsed_list = get_insert_entity_and_col_name_from_embedded_associative_str(single_level_association[0])
                 print("SINGLE - DYNAMIC: {0}".format(parsed_list))
@@ -886,25 +1149,6 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
                 execute_partial_transaction_cmd(curr_cmd, cursor)
 
         # END DEBUGGING
-        #
-        # db = connect()
-        # cursor = db.cursor()
-        # # start transaction
-        # # insert into chosen_entity values in in_entity_field_values
-        # error = execute_partial_transaction_cmd("")
-        # # get id of newly created entity in form: "pk_name=value"
-        # # for each single level association:
-        # #   insert into associated table: chosen entity's pk_name=value, distant associated entity's pk_name=value, any other vals (ex. abilityscore)
-        # # for each multi level association:
-        # #   1. insert parent
-        # #   2. get parent generated id in form:"pk_name=value"
-        # #   3. For each child:
-        # #       Insert into distant associated table: parent's pk_name=value, 
-        # # end transaction
-        # # commit transaction
-        # db.commit()
-        # cursor.close()
-        # db.close()
         db.commit()
         cursor.close()
         db.close()
@@ -913,10 +1157,30 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
         print("INSERT RECORD EXCEPTION - {0}".format(e))
         cursor.close()
         db.close()
+
+        # DEBUGGING
         raise e
+        # END DEBUGGING
+
         # rollback?
         return None, e
 
+
+def level_up_character_in_db(char_id, class_id, new_hp, new_spells):
+    try:
+        db = connect()
+        cursor = db.cursor()
+        execute_partial_transaction_cmd("CALL increase_char_base_hp('{0}', '{1}')".format(char_id, new_hp), cursor)
+        execute_partial_transaction_cmd("CALL give_character_new_level_allocation('{0}', '{1}')".format(char_id, class_id), cursor)
+        for spell_id in new_spells:
+            execute_partial_transaction_cmd("INSERT INTO learnedspell(char_id, spell_id) VALUES('{0}', '{1}')".format(char_id, spell_id), cursor)
+
+        db.commit()
+        cursor.close()
+        db.close()
+    except Exception as e:
+        print(e)
+        return
 
 # TODO: replace every other instance of execute to get fetchall() with this
 def execute_cmd_and_get_result(cursor_cmd, multiple_args=True):
@@ -1056,10 +1320,11 @@ def execute_partial_transaction_cmd(cursor_cmd, cursor, multiple_args=True):
 
 def execute_field_update(entity, field, new_value, condition):
     try:
+        cmd = "CALL update_field_in_record('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition)
         # DEBUGGING
-        print("FIELD UPDATE: CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
+        print("FIELD UPDATE: {0}".format(cmd))
         # END DEBUGGING
-        execute_cmd("CALL update_field_in_table('{0}', '{1}', '{2}', '{3}')".format(entity, field, new_value, condition))
+        execute_cmd(cmd)
         return True
 
     except Exception as e:
@@ -1086,6 +1351,15 @@ def get_display_and_column_names_select_statement_as_str(entity):
 def get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table(entity):
     try:
         results = execute_cmd_and_get_result("CALL get_displayname_displaycolname_fkvalue_fkcolname('{0}')".format(entity))
+        return results
+    except:
+        return []
+
+
+def get_displayname_displaycolname_fk_fkcolname_for_all_records_in_table_created_by_current_user(entity):
+    try:
+        global logged_in_user_details
+        results = execute_cmd_and_get_result("CALL get_displayname_displaycolname_fkvalue_fkcolname_with_condition('{0}', '{1}')".format(entity, logged_in_user_details['player_id']))
         return results
     except:
         return []
@@ -1146,19 +1420,19 @@ def get_formatted_previews_and_metadata_list(unformatted_records):
         for i in range(0, min(1, end_index)):
             curr_record_identifier_metadata_pair = [column_names_list[i], record[i]]
             # DEBUGGING
-            print("identifier_pair: {0}".format(curr_record_identifier_metadata_pair))
+            # print("identifier_pair: {0}".format(curr_record_identifier_metadata_pair))
             # END DEBUGGING
 
         for i in range(1, min(2, end_index)):
             curr_record_table_name = record[i]
             # DEBUGGING
-            print("table_name: {0}".format(curr_record_table_name))
+            # print("table_name: {0}".format(curr_record_table_name))
             # END DEBUGGING
 
         for i in range(2, min(3, end_index)):
             curr_record_identifier_pair = [column_names_list[i], record[i]]
             # DEBUGGING
-            print("col_val_pair: {0}".format(curr_record_identifier_pair))
+            # print("col_val_pair: {0}".format(curr_record_identifier_pair))
             # END DEBUGGING
 
         for i in range(3, end_index):
@@ -1185,89 +1459,37 @@ def get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(e
     return [embedded_associative_table, embedded_pk_name_and_val[0], embedded_pk_name_and_val[1]]
 
 
-# TODO: DELETE
-@app.route('/players', methods=['GET', 'POST'])
-def players():
-    if request.method == "POST":
-        for key in request.form:
-            print("{0}, {1}".format(key, request.form[key]))
-    return render_template('players.html')
+def get_formatted_attribute_label(unformatted_label):
+    if "_" not in unformatted_label:
+        return unformatted_label
 
+    unformatted_label = unformatted_label.split("_", 1)[1]
 
-# TODO: DELETE
-@app.route('/dynamic_fields', methods=['GET', 'POST'])
-def dynamic_fields():
-    if request.method == "POST":
-        # get which option selected: X or +
-        saved_keys = []
-        saved_vals = []
-        decision = ""
-        decision_key = ""
-        attr_name = ""
-        action = ""
-        field_type = ""
-        last_index = 0
-
-        saved_key_val_pairs = []
-
-        for key in request.form:
-            val = request.form[key]
-            print("{0}, {1}".format(key, val))
-            if "decision" in key:
-                decision = val
-                decision_key = key
-                print("DECISION: {0}".format(decision_key))
-
-            elif "attr_name" in key:
-                attr_name = val
-                print("ATTR: {0}".format(attr_name))
-
-            elif "field_type" in key:
-                field_type = val
-                print("FIELD_TYPE: {0}".format(field_type))
-
-            else:
-                # if val.endswith("/"):
-                #     val = val[0:-1]
-                # if key.endswith("/"):
-                #     key = key[0:-1]
-                # print("STRIPPED VAL: '{0}'".format(val))
-                saved_keys.append(key)
-                saved_vals.append(val)
-        
-        if "delete" in decision_key:
-            action = "delete"
-            attr_to_delete = decision_key[len("decision_delete_"):]
-            print("ATTR TO DELETE: {0}".format(attr_to_delete))
-            del_index = saved_keys.index(attr_to_delete)
-            del saved_keys[del_index]
-            del saved_vals[del_index]
-
-        else:
-            action = "add"
-            
-        for i in range(0, min(len(saved_keys), len(saved_vals))):
-            saved_key_val_pairs.append([saved_keys[i], saved_vals[i]])
-        
+    if unformatted_label == "id":
+        return "ID"
     else:
-        field_type = "text"
-        action = "initialize"
-        saved_key_val_pairs = []
-        saved_key_val_pairs.append(["dm_id_0", '0th-value'])
-        saved_key_val_pairs.append(["dm_id_1", '1st value'])
-        saved_key_val_pairs.append(["dm_id_2", '2nd value'])
-        saved_key_val_pairs.append(["dm_id_3", '3rd value'])
-        attr_name = "dm_id"
-        # length = len(saved_key_val_pairs)
-    # TODO: rather than length, should have a "last unique id" value
-    # length = len(saved_key_val_pairs)
-    last_attr = saved_key_val_pairs[len(saved_key_val_pairs) - 1][0]
-    attr_prefix = "{0}_".format(attr_name)
-    length = int(last_attr[len(attr_prefix):]) + 1
-    print("LENGTH: {0}".format(length))
+        formatted_label_components = ["{0}{1}".format(component[0].upper(), component[1:]) if len(component) > 1 else component.upper() for component in unformatted_label.split("_")]
+        return " ".join(formatted_label_components)
 
-    return render_template('dynamic_fields.html', attr_name=attr_name, action=action, field_type=field_type, saved_val=saved_key_val_pairs, length=length)
-            
+
+def get_level_up_data_list(char_id, class_name):
+    class_id = execute_cmd_and_get_result("SELECT class_id FROM class WHERE class_name = '{0}'".format(class_name))[0][0]
+    char_level = execute_cmd_and_get_result("SELECT get_character_class_level('{0}', '{1}')".format(char_id, class_id))[0][0]
+    spellslots_info = execute_cmd_and_get_result("CALL get_newspells_count_for_class_at_level('{0}', '{1}')".format(class_id, char_level + 1))
+    spell_metadata_and_values_list = []
+    if spellslots_info != []:
+        spellslots_info = spellslots_info[0]
+        for i in range(0, len(spellslots_info)):
+            if spellslots_info[i] > 0:
+                level_str = "{0}".format(i)
+                num_new_spells_of_level = spellslots_info[i]
+                spell_options_of_level = execute_cmd_and_get_result("CALL get_learnable_spells_for_character_of_class_at_level('{0}', '{1}', '{2}')".format(char_id, class_id, i))
+                spell_metadata_and_values_list.append([level_str, num_new_spells_of_level, spell_options_of_level])
+
+    hit_die_addition_str = execute_cmd_and_get_result("SELECT get_level_up_hp_calc_str_for_character('{0}', '{1}')".format(char_id, class_id))[0][0]
+
+    print("LEVEL UP INFO: {0}, {1}, {2}, {3}, {4}".format(class_id, char_level, spellslots_info, spell_metadata_and_values_list, hit_die_addition_str))
+    return class_id, hit_die_addition_str, spell_metadata_and_values_list
 
 
 if __name__ == '__main__':

@@ -1,0 +1,69 @@
+<html>
+    <head>
+        <link href="../../static/styles/style.css" rel="stylesheet" type="text/css">
+    </head>
+    <body>
+        <form class="levelup_form" action="{{ url_for('confirmed_level_up', char_id=char_id, class_id=class_id) }}" target="_PARENT"  method="POST" autocomplete="off">
+            <table>
+                <tr>
+                    <td>
+                        <label for="hit_die_str">New Hit Points ({{hit_die_str}}) : </label>
+                    </td>
+                    <td>
+                        <input type="text" name="hit_die_str" placeholder="{{hit_die_str}}" pattern="[0-9]+" required/>
+                    </td>
+                </tr>
+                {% for spell_with_metadata in spell_metadata_and_values_list %}
+                    {% set spell_level = spell_with_metadata[0] %}
+                    {% set new_spells_count_for_level = spell_with_metadata[1] %}
+                    {% set spell_options_with_metadata = spell_with_metadata[2] %}
+                    <tr>
+                        <td>
+                            <label for="new_spell_level_{{spell_level}}">New Level {{spell_level}} Spell(s): </label>
+                        </td>
+                        <td>
+                            <table>
+                                {% for i in range(new_spells_count_for_level) %}
+                                <tr>
+                                    <td>
+                                        <select id="new_spell_level_{{spell_level}}_{{i}}" name="new_spell_level_{{spell_level}}_{{i}}">
+                                            {% for spell_option in spell_options_with_metadata %}
+                                                <option value="{{spell_option[0]}}">{{spell_option[1]}}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        </td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td>
+                        <input type="submit" name="submit_btn" value="Confirm Level Up">
+                    </td>
+                </tr>
+            </table>
+        </form>
+        <script>
+            var frm = document.querySelector('form.levelup_form');
+            var inputs = frm.querySelectorAll('select');
+
+            frm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var select_choices = [];
+
+                for(var i = 0; i < inputs.length; i++) {
+                    if(select_choices.indexOf(inputs[i].value) != -1) {
+                        inputs[i].style.backgroundColor = "red";
+                        return false;
+                    }else{
+                        inputs[i].style.backgroundColor = "white";
+                        select_choices.push(inputs[i].value);
+                    }
+                }
+                frm.submit();
+            });
+        </script>
+    </body>
+</html>

@@ -101,7 +101,7 @@ CREATE TABLE `character`(
     char_name VARCHAR(255) DEFAULT NULL,
     char_gender VARCHAR(32) DEFAULT NULL,
     char_backstory TEXT DEFAULT NULL,
-    char_age SMALLINT DEFAULT NULL,
+    char_age SMALLINT NOT NULL DEFAULT 0,
     char_height VARCHAR(10) DEFAULT NULL,
     char_notes TEXT DEFAULT NULL,
     char_public_class ENUM(
@@ -109,8 +109,8 @@ CREATE TABLE `character`(
 								"monk", "paladin", "ranger", "rogue", "sorcerer",
                                 "warlock", "wizard", "multiclass", "classless"
 						   ) NOT NULL DEFAULT "classless",
-    char_base_hp SMALLINT DEFAULT NULL,
-    char_hp_remaining SMALLINT DEFAULT NULL,
+    char_base_hp SMALLINT NOT NULL DEFAULT 0,
+    char_hp_remaining SMALLINT NOT NULL DEFAULT 0,
     char_platinum INT NOT NULL DEFAULT 0,
     char_gold INT NOT NULL DEFAULT 0,
     char_silver INT NOT NULL DEFAULT 0,
@@ -188,14 +188,14 @@ CREATE TABLE characterlearnedlanguage(
 CREATE TABLE characterinventoryitem(
 	char_id INT(10),
     item_id INT(10),
-    characterinventoryitem_counter SMALLINT UNIQUE NOT NULL DEFAULT 0,
+    characterinventoryitem_counter SMALLINT NOT NULL DEFAULT 0,
     PRIMARY KEY(char_id, item_id, characterinventoryitem_counter)
 )ENGINE=InnoDB;
 
 CREATE TABLE monsterlootitem(
 	encounter_id INT(11),
     item_id INT(10),
-    monsterlootitem_counter SMALLINT UNIQUE NOT NULL DEFAULT 0,
+    monsterlootitem_counter SMALLINT NOT NULL DEFAULT 0,
     PRIMARY KEY(encounter_id, item_id, monsterlootitem_counter)	
 )ENGINE=InnoDB;
 
@@ -327,3 +327,4 @@ ALTER TABLE classlearnablespell ADD CONSTRAINT `cls_fk_class_id` FOREIGN KEY(cla
 ALTER TABLE classlearnablespell ADD CONSTRAINT `cls_fk_spell_id` FOREIGN KEY(spell_id) REFERENCES spell(spell_id);
 ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_campaign_id` FOREIGN KEY(campaign_id) REFERENCES campaign(campaign_id);
 ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
+ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);

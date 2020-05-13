@@ -1,0 +1,28 @@
+1. Delete user
+2. filter fields shown for create
+3. Clean enum values given to page
+4. Monsterparty => filter fk's by your dm_id
+5. Clean up the Titles/Labels for things in html
+6. Field types and parameters for different datatypes
+7. Required fields on create prevent "quit" button from working
+8. Add more searchable entities
+9. hp_remaining -> on insert, LEVEL UP, set = base (for character, monsterencounter)
+10. Switch create from using full attrs to only partial attrs of entity_details VIEW
+11. add class, race, and ability to search list
+12. associatives need to do check on if are creator before adding to template
+13. "None" for get_alphanum_enum_vals => change to "" for Entity Details
+14. remove "class" as option for entity details for character
+15. textarea instead of text input for fields with "TEXT" datatype
+16. Add filtering by owned campaign vs. participatory campaign vs. no filter for My Campaigns
+
+17. static-dropdown for partymember in Character Entity Details
+18. Monsterparty campaigns options = limited by curr dm_id
+19. my campaigns
+
+
+*** _details view for EVERY table!!
+	|_\  STUB: if get_nonforeignkey.... called for "_details", then just call it on table
+	  /
+	  
+-> details view is used for the base page of Entity Details View
+-> details view of associatives is used for base page of Entitys that link to them
