@@ -473,7 +473,19 @@ input[readonly]{
     margin-top: 25px;
 }
 
-.levelup_btn button:hover{
+.levelup_btn button:hover, .delete_btn button:hover{
     background-color:white;
     color:black;
+}
+
+.notification_ERROR{
+    color: rgb(141, 18, 18);
+    text-align:center;
+    margin-top: 25px;
+}
+
+.notification_SUCCESS{
+    color: #143014;
+    text-align:center;
+    margin-top: 25px;
 }

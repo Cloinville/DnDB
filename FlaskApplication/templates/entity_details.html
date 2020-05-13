@@ -31,6 +31,13 @@
                 </div>
             </div>
         </header>
+        {% if notification != None %}
+            <div class="notification_{{notification[0]}}">
+                <p>
+                    {{notification[0]}} : {{notification[1]}}
+                </p>
+            </div>
+        {% endif %}
         <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Details</h1>
         {% set can_edit = [] %}
         <form action="" method="POST" autocomplete="off">
@@ -42,7 +49,7 @@
                         {% if alphanumeric_attr_with_datatype[-2] == "YES" %}
                             {% do can_edit.append(1) %}
                         {% endif %}
-                         
+
                         {% set keyable_attr_name = alphanumeric_attr_with_datatype[0] | replace(" ", "-") %}
                         <tr>
                             <td>
@@ -64,12 +71,13 @@
                 {% endfor %}
                 {% for record in enum_attr_list %}
                     {% for enum_attr in record %}
+                        {% set keyable_attr_name = enum_attr[0] | replace(" ", "-") %}
                         <tr>
                             <td>
                                 <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
                             </td>
                             <td>
-                                <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
+                                <select id={{keyable_attr_name}} name={{keyable_attr_name}} {{enum_attr_2}}>
                                     {% for enum_val in enum_attr[1] %}
                                         {% if enum_val == enum_attr[3] %}
                                             <option value="{{enum_val}}" selected>{{ enum_val[0]|upper}}{{enum_val[1:] }}</option>
@@ -78,6 +86,9 @@
                                         {% endif %}
                                     {% endfor %}
                                 </select>
+                                {% if can_edit and enum_attr[3] != "readonly" and enum_attr[3] != "disabled" %}
+                                    <input type="submit" name="updatebtn_{{keyable_attr_name}}" value="&#128190;">
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
@@ -154,7 +165,7 @@
                                         {% endfor %}
                                     </table>
                                 </td>
-                                {% if associative_link_info[0] != "characterabilityscore" and associative_link_info[0] != "monsterabilityscore" %} <!-- And is Page Owner -->
+                                {% if can_edit and associative_link_info[0] != "characterabilityscore" and associative_link_info[0] != "monsterabilityscore" %} <!-- And is Page Owner -->
                                     <td>
                                         <input type="submit" name="{{associative_delete_btn_name}}" value="DELETE">
                                     </td>
@@ -165,6 +176,7 @@
                     </form>
                     <!-- Form for direct additions ie. single -->
                     <!-- TODO: if is page owner -->
+                    {% if can_edit %}
                     <form action="" method="POST" autocomplete="off">
                         <table class="directattrtemplate_tbl">
 
@@ -230,13 +242,16 @@
                                 </tr>
                                 <tr>
                                     <td>
-                                        <input type="submit" name="addbtn_ADDFOR_{{associative_prefix}}" value="Save Additions" />
+                                        {% if can_edit %}
+                                            <input type="submit" name="addbtn_ADDFOR_{{associative_prefix}}" value="Save Additions" />
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endfor %}
                         {% endif %}
                         </table>
                     </form>
+                    {% endif %}
                 {% endfor %} 
             </table>
         {% endif %}
@@ -307,13 +322,16 @@
                                 <td>
                                     <!-- TODO: If are page owner -->
                                     <!-- <input type="submit" name="deletebtn_{{associative_link_info[0]}}_DELETEFOR_{{associative_link_info[1]}}" value="DELETE"> -->
-                                    <input type="submit" name="{{associative_delete_btn_name}}" value="DELETE">
+                                    {% if can_edit %}
+                                        <input type="submit" name="{{associative_delete_btn_name}}" value="DELETE">
+                                    {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}
                         </table>
                     </form>
                     <!-- TODO: if are page owner -->
+                    {% if can_edit %}
                     <form action="" method="POST" autocomplete="off">
                         <table class="multilinked_attr_template_tbl">
 
@@ -371,10 +389,11 @@
                         {% endfor %}
                             </table>
                     </form>
+                    {% endif %}
                 {% endfor %}
             </table>
         {% endif %}
-        {% if chosen_entity == "character" %}
+        {% if chosen_entity == "character" and can_edit %}
             <div class="levelup_btn">
                 <form action="{{url_for('level_up', char_id=entity_id)}}">
                     <button>Level Up!</button>

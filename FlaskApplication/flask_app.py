@@ -435,6 +435,8 @@ def entity_details(entity, entity_id):
     if logged_in_user_details['username'] == None:
         return redirect('/login')
     
+    notification = None
+    
     if request.method == "POST":
         method = None
         called_key = None
@@ -474,14 +476,28 @@ def entity_details(entity, entity_id):
             return redirect(url_for('level_up', char_id=request.form[called_key]))
         elif method == "delete":
             #5/11 TODO: handle this...
-            # 1. split on "_DELETEFOR_": [0] -> delete_tbl, [1] -> second condition
-            # 2. If associative entity (in keys of associative_sources or w/e), then get second condition:
-            #       1. get pk name of class
-            #       2. condition = "WHERE {0}_id={1} AND {2}".format(prefix_of_class, entity_id, second_cond)
             print("METHOD: delete - {0}".format(called_key))
+
+            delete_instructions = called_key.split("_DELETEFOR_")
+            delete_table, first_delete_condition = delete_instructions
+            first_pk_name = first_delete_condition.split("=")[0]
+            second_pk_name = execute_cmd_and_get_result("SELECT get_other_id_colname_from_associative('{0}', '{1}')".format(delete_table, first_pk_name))[0][0]
+            second_delete_condition = "{0}='{1}'".format(second_pk_name, entity_id)
+
+            full_delete_condition = "WHERE {0} AND {1}".format(first_delete_condition, second_delete_condition)
+            delete_multiple_records = 0
+
+            delete_cmd = "CALL delete_record_in_table('{0}', '{1}', '{2}')".format(delete_table, full_delete_condition, delete_multiple_records)
+            print("DELETE CMD: {0}".format(delete_cmd))
+            execute_cmd(delete_cmd)
+
+            notification = ["SUCCESS", "Associated record successfully deleted"]
+
         elif method == "add":
             #TODO: handle this...
             print("METHOD: add - {0}".format(called_key))
+            notification = ["SUCCESS", "Associated record successfully added"]
+
         elif method == "update":
             print("UPDATED VALUE: KEY: {0}, VALUE: {1}".format(called_key, request.form[called_key]))
             # condition = "WHERE ID = '{0}'".format(entity_id)
@@ -520,6 +536,7 @@ def entity_details(entity, entity_id):
             print("UPDATING ON COMMAND: {0}".format(update_cmd))
             # END DEBUGGING
             execute_cmd(update_cmd)
+            notification = ["SUCCESS", "Associated field successfully updated"]
 
     chosen_entity = entity
 
@@ -529,7 +546,7 @@ def entity_details(entity, entity_id):
 
     direct_attr_list_values_and_templates, multilinked_attr_list_values_and_templates = get_associative_attr_lists_for_entity_details(chosen_entity, entity_id, True)
 
-    return render_template('entity_details.html', chosen_entity = chosen_entity, entity_id=entity_id, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, all_attr_lists=all_attr_lists, direct_attr_list=direct_attr_list_values_and_templates, multilinked_attr_list=multilinked_attr_list_values_and_templates, logged_in_user_details=logged_in_user_details)
+    return render_template('entity_details.html', chosen_entity = chosen_entity, entity_id=entity_id, alphanumeric_attr_list=alphanumeric_attr_list, enum_attr_list=enum_attr_list, all_attr_lists=all_attr_lists, direct_attr_list=direct_attr_list_values_and_templates, multilinked_attr_list=multilinked_attr_list_values_and_templates, logged_in_user_details=logged_in_user_details, notification=notification)
 
 
 @app.route('/level_up/<char_id>', methods=['POST', 'GET'])
@@ -1106,7 +1123,11 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
 def upgrade_player_to_dm():
     global logged_in_user_details
     if logged_in_user_details['dm_id'] == None:
-        execute_cmd("INSERT INTO dungeonmaster(player_id) VALUES({0})".format(logged_in_user_details['player_id']))
+        try:
+            execute_cmd("INSERT INTO dungeonmaster(player_id) VALUES({0})".format(logged_in_user_details['player_id']))
+            logged_in_user_details['dm_id'] = execute_cmd_and_get_result("SELECT dm_id FROM dungeonmaster JOIN player USING(player_id) WHERE player_username = '{0}'".format(logged_in_user_details['username']))
+        except Exception as e:
+            print(e)
 
 
 def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values, single_level_associations, multi_level_parent_with_children):
@@ -1191,11 +1212,25 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
                 curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
                 print("DYNAMIC INSERT CMD: {0}".format(curr_cmd))
 
+                # if curr_entity == "characterlearnedlanguage":
+                #     # checks = " AND ".join([" = ".join(row) for row in list(zip(curr_col_list_str,["'{0}'".format(row) for row in curr_val_list_str]))])
+                #     checks = " AND ".join([" = ".join(row) for row in list(zip(curr_col_list_str.split(","), curr_val_list_str.split(",")))])
+                #     instance_check_cmd = "SELECT {0} FROM {1} WHERE {2}".format(curr_col_list_str, curr_entity, checks)
+                #     print("INSTANCE CHECK: {0}".format(instance_check_cmd))
+                #     existing_record = execute_partial_transaction_cmd_and_get_result(instance_check_cmd, cursor)
+                #     print("EXISTING RECORD: {0}".format(existing_record))
+
                 if curr_cmd not in prev_possibly_repeatable_dynamic_inserts:
                     prev_possibly_repeatable_dynamic_inserts.append(curr_cmd)
                     print("UNREPEATED DYNAMIC CMD")
-
-                    execute_partial_transaction_cmd(curr_cmd, cursor)
+                    try:
+                        execute_partial_transaction_cmd(curr_cmd, cursor)
+                    except mysql.connector.Error as e:
+                        if e.errno == 1062:
+                            print("Duplicate insert - Skipped")
+                            pass
+                        else:
+                            raise e
 
         for multi_level_association in multi_level_parent_with_children:
             curr_base_pk_name = saved_base_pk_name

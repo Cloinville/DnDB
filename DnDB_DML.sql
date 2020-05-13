@@ -298,7 +298,8 @@ BEGIN
     FROM INFORMATION_SCHEMA.columns 
     WHERE table_schema="csuciklo_dndb" 
 		  AND table_name = in_table_name 
-          AND column_key = "PRI";
+          AND column_key = "PRI"
+	LIMIT 1;
           
 	RETURN primary_key_name;
 END $$
@@ -894,7 +895,7 @@ BEGIN
 		       allow_edits as "Name", 
 			   "NO" as "Player",
 		       allow_edits as "Gender",
-               "NO" as "Level",
+               "NO" as "Overall Level",
                "NO" as "Level Allocations",
                "NO" as "Race", 
                "NO" as "Speed", 
@@ -1075,9 +1076,13 @@ BEGIN
         SELECT * FROM monsterlootitem_details WHERE ID = primary_key_value;
 	ELSEIF entity = "monsterparty"
     THEN
-		# 5/7 STUB
+		SET creator_id = (SELECT dm_id FROM monsterparty WHERE monsterparty_id = primary_key_value AND dm_id = player_dm_id);
+        IF creator_id IS NOT NULL
+        THEN
+			SET allow_edits = "YES";
+		END IF;
         SELECT "NO" as "ID", 
-			   "NO" as "Location",
+			   allow_edits as "Location",
                "NO" as "Campaign"
         UNION ALL
 		SELECT * FROM monsterparty_details WHERE ID = primary_key_value;
@@ -1190,7 +1195,7 @@ AS
 		   char_name as "Name", 
 		   player_nickname as "Player",
 		   char_gender as "Gender",
-           char_overall_level as "Level",
+           char_overall_level as "Overall Level",
            group_concat(CONCAT(class_name, ": ", levelallocation_level) SEPARATOR", ") as "Level Allocation",
            race_name as "Race", 
            race_speed as "Speed", 
@@ -1201,7 +1206,7 @@ AS
 		   char_notes as "Notes", 
            char_public_class as "Public Class", 
            char_base_hp as "Base HP", 
-           char_hp_remaining as "Remaining HP",
+           char_remaining_hp as "Remaining HP",
            char_platinum as "Platinum", 
            char_gold as "Gold", 
            char_silver as "Silver", 
@@ -1547,6 +1552,24 @@ BEGIN
 END $$
 DELIMITER ;
 
+DROP FUNCTION IF EXISTS get_other_id_colname_from_associative;
+DELIMITER $$
+CREATE FUNCTION get_other_id_colname_from_associative(in_table VARCHAR(255), in_id_colname VARCHAR(255))
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+	RETURN ( SELECT column_name
+		     FROM INFORMATION_SCHEMA.columns 
+			 WHERE table_schema="csuciklo_dndb" 
+				   AND table_name = in_table
+                   AND column_key = "PRI"
+                   AND RIGHT(column_name, 3) = "_id"
+				   AND column_name != in_id_colname
+			 LIMIT 1
+			);
+END $$
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS delete_record_in_table;
 DELIMITER $$
 CREATE PROCEDURE delete_record_in_table(in_table VARCHAR(255), in_conditions TEXT, delete_multi BOOLEAN)
@@ -1627,6 +1650,40 @@ BEGIN
 	UPDATE `character` 
 		   SET `character`.char_overall_level = total_levels
 	WHERE `character`.char_id = NEW.char_id;
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS add_race_languages_to_character;
+DELIMITER $$
+CREATE TRIGGER add_race_languages_to_character
+AFTER
+INSERT ON `character`
+FOR EACH ROW
+BEGIN
+	INSERT INTO characterlearnedlanguage 
+		SELECT NEW.char_id, language_id 
+		FROM race JOIN `character` USING(race_id)
+		          JOIN raceknownlanguage USING(race_id)
+				  WHERE char_id = NEW.char_id;
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS apply_race_modifier_to_characterabilityscore;
+DELIMITER $$
+CREATE TRIGGER apply_race_modifier_to_characterabilityscore
+BEFORE
+INSERT ON characterabilityscore
+FOR EACH ROW
+BEGIN
+	DECLARE modifier INT DEFAULT 0;
+    SELECT racemodifier_value 
+    INTO modifier 
+    FROM raceabilityscoremodifier JOIN race USING(race_id) 
+								  JOIN `character` USING(race_id) 
+	WHERE char_id = NEW.char_id 
+		  AND ability_id = NEW.ability_id;
+          
+    SET NEW.charabilityscore_value = modifier + NEW.charabilityscore_value;
 END $$
 DELIMITER ;
 

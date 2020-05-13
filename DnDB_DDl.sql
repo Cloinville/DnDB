@@ -110,7 +110,7 @@ CREATE TABLE `character`(
                                 "warlock", "wizard", "multiclass", "classless"
 						   ) NOT NULL DEFAULT "classless",
     char_base_hp SMALLINT NOT NULL DEFAULT 0,
-    char_hp_remaining SMALLINT NOT NULL DEFAULT 0,
+    char_remaining_hp SMALLINT NOT NULL DEFAULT 0,
     char_platinum INT NOT NULL DEFAULT 0,
     char_gold INT NOT NULL DEFAULT 0,
     char_silver INT NOT NULL DEFAULT 0,
