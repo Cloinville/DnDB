@@ -189,8 +189,8 @@
                                     </td>
                                     <td>
                                         <table class="inner_table">
-                                            <tr>
-                                                {% if associative_dynamic_additions_generation_info[0] != "static-dropdown" %}
+                                            {% if associative_dynamic_additions_generation_info[0] != "static-dropdown" %}
+                                                <tr>
                                                     {% for option in option_fk_set[2] %}
                                                         <td>
                                                             {{option[0]}} :
@@ -200,16 +200,28 @@
                                                             <input type="text" name="{{associative_prefix}}={{option[2]}}" required>
                                                         </td>
                                                     {% endfor %}
-                                                {% else %}
-                                                        <td></td>
-                                                        <td>
-                                                            <select name="{{associative_prefix}}">
-                                                                {% for option in option_fk_set[2] %}
-                                                                    <option value="{{associative_prefix}}={{option[2]}}">{{option[0]}}</option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </td>
-                                                {% endif %}
+                                                </tr>
+                                            {% else %}
+                                                <!-- Not sure if changing the set above will cause issues, so changing here instead -->
+                                                {% set associative_prefix = associative_dynamic_additions_generation_info[0] ~ "_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ option_fk_set[1] %}
+                                                <tr>
+                                                    <td></td>
+                                                    <td>
+                                                        <select name="{{associative_prefix}}">
+                                                            {% for option in option_fk_set[2] %}
+                                                                <option value="{{associative_prefix}}={{option[2]}}">{{option[0]}}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="2">
+                                                        {% if can_edit %}
+                                                            <input type="submit" name="addbtn_ADDFOR_{{associative_prefix}}" value="Save Additions" />
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
                                             </tr>
                                         </table>
                                     </td>

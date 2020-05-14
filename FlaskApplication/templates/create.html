@@ -88,6 +88,11 @@
                     <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Battle Encounter</button>
                 </form>
             </div>
+            <div class="grid-item">
+                <form action="{{url_for('create_details', entity='item')}}">
+                    <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Item</button>
+                </form>
+            </div>
         </div>
     </body>
 </html>

@@ -285,6 +285,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# TODO: can optimize this w/if-else if statement, since only a few don't have the form "tablename_id"
 DROP FUNCTION IF EXISTS get_primary_key_name_from_table_name;
 DELIMITER $$
 CREATE FUNCTION get_primary_key_name_from_table_name(in_table_name VARCHAR(255))
@@ -348,6 +349,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# SHow? Procedure #11?
 DROP PROCEDURE IF EXISTS get_campaign_previews;
 DELIMITER $$
 CREATE PROCEDURE get_campaign_previews(in_player_id VARCHAR(255), in_dm_id VARCHAR(255))
@@ -663,6 +665,7 @@ DELIMITER ;
 # or by updating the existing record for that corresponding PartyMember.
 # If no campaign ID is specified or the Character of the corresponding PartyMember is non-null, then
 # no action is taken.
+# 5/12: SHOW: Procedure #1
 DROP PROCEDURE IF EXISTS conditional_partymember_record_insert_for_character;
 DELIMITER $$
 CREATE PROCEDURE conditional_partymember_record_insert_for_character(in_char_id VARCHAR(255), in_player_id VARCHAR(255), in_campaign_id VARCHAR(255))
@@ -705,6 +708,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# SHOW: Procedure #2
 DROP PROCEDURE IF EXISTS get_newspells_count_for_class_at_level;
 DELIMITER $$
 CREATE PROCEDURE get_newspells_count_for_class_at_level(in_class_id VARCHAR(255), in_level VARCHAR(255))
@@ -756,6 +760,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# SHOW: Procedure #3
 DROP PROCEDURE IF EXISTS get_open_campaigns_of_player;
 DELIMITER $$
 CREATE PROCEDURE get_open_campaigns_of_player(in_player_id VARCHAR(255))
@@ -764,6 +769,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# SHOW: Procedure/Function #4
 DROP FUNCTION IF EXISTS get_level_up_hp_calc_str_for_character;
 DELIMITER $$
 CREATE FUNCTION get_level_up_hp_calc_str_for_character(in_char_id VARCHAR(255), in_class_id VARCHAR(255))
@@ -778,6 +784,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# SHOW: Procedure #5
 # TODO: change so uses views instead
 DROP PROCEDURE IF EXISTS get_learnable_spells_for_character_of_class_at_level;
 DELIMITER $$
@@ -803,6 +810,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# Possibly show? Procedure/function #6?
 DROP PROCEDURE IF EXISTS increase_char_base_hp;
 DELIMITER $$
 CREATE PROCEDURE increase_char_base_hp(in_char_id VARCHAR(255), in_new_hp VARCHAR(255))
@@ -813,6 +821,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# SHOW? Procedure/Function #7?
 DROP FUNCTION IF EXISTS get_character_class_level;
 DELIMITER $$
 CREATE FUNCTION get_character_class_level(in_char_id VARCHAR(255), in_class_id VARCHAR(255))
@@ -830,6 +839,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# Show? Procedure #8?
 DROP PROCEDURE IF EXISTS give_character_new_level_allocation;
 DELIMITER $$
 CREATE PROCEDURE give_character_new_level_allocation(in_char_id VARCHAR(255), in_class_id VARCHAR(255))
@@ -849,6 +859,7 @@ BEGIN
 END $$
 DELIMITER ;
 
+# Probably show, since used a lot - Procedure/Function #9
 # STUB - fill in with grab from Views?
 # VIEW FROM: 1st row as col name; 2nd row as Data type info
 DROP PROCEDURE IF EXISTS get_direct_entity_details;
@@ -884,6 +895,34 @@ BEGIN
                allow_edits as "Party Name"
         UNION ALL
         SELECT * FROM campaign_details WHERE ID = primary_key_value;
+	ELSEIF entity = "campaign_private_partymember_details"
+    THEN
+		# No setting edits allowed for associative entities
+		SELECT "NO" as "ID", 
+		       "NO" as "Player",
+               "NO" as "Name",
+               "NO" as "Gender",
+               "NO" as "Overall Level",
+               "NO" as "Level Allocation",
+               "NO" as "Race",
+               "NO" as "Speed",
+               "NO" as "Size",
+               "NO" as "Backstory",
+               "NO" as "Notes",
+               "NO" as "Base HP",
+               "NO" as "Money",
+               "NO" as "Inventory"
+		UNION ALL
+		SELECT * FROM campaign_private_partymember_details WHERE ID = primary_key_value;
+	ELSEIF entity = "campaign_public_partymember_details"
+    THEN
+		# No edits allowed for associative entities
+		SELECT "NO" as "ID",
+		       "NO" as "Player",
+               "NO" as "Character Name",
+               "NO" as "Class"
+		UNION ALL
+        SELECT * FROM campaign_public_partymember_details WHERE ID = primary_key_value;
 	ELSEIF entity = "character"
     THEN
 		SET creator_id = (SELECT player_id FROM `character` WHERE char_id = primary_key_value AND player_id = in_player_id);
@@ -1187,7 +1226,7 @@ END $$
 DELIMITER ;
 
 # ** EDITABLE FIELDS VIEWS -> get fk, non fk stuff pulls from these, instead of tables themselves
-# TODO: combine with just the "readonly details" piece
+# Show: View #1
 DROP VIEW IF EXISTS character_details;
 CREATE VIEW character_details
 AS
@@ -1283,6 +1322,7 @@ AS
 								left join item using(item_id);
 
 # 5/10 Colin's Version
+# Edit this, and show as View #2
 DROP VIEW IF EXISTS weapon_details;	
 CREATE VIEW weapon_details	
 AS	
@@ -1333,6 +1373,7 @@ AS
     FROM monsterencounter JOIN monster USING(monster_id);
     
 # 5/7 STUB(?)
+# Show: View #3
 DROP VIEW IF EXISTS monsterparty_monsterencounter_details;
 CREATE VIEW monsterparty_monsterencounter_details
 AS
@@ -1376,12 +1417,23 @@ AS
     FROM monsterparty JOIN campaign USING(campaign_id);
     
 # 5/7 STUB
+# TODO: Remove this, probably, & replace w/public_campaign_partymember_details
 DROP VIEW IF EXISTS player_partymember_details;
 CREATE VIEW player_partymember_details
 AS
     SELECT campaign_id as "ID",
-		   player_nickname as "Player Nickname",
+		   player_nickname as "Player",
            char_name as "Character Name"
+    FROM partymember JOIN player USING(player_id) LEFT JOIN `character` USING(char_id);
+    
+# TODO: Fix python end so use this
+DROP VIEW IF EXISTS public_campaign_partymember_details;
+CREATE VIEW public_campaign_partymember_details
+AS
+    SELECT campaign_id as "ID",
+		   player_nickname as "Player",
+           char_name as "Character Name",
+           char_public_class as "Class"
     FROM partymember JOIN player USING(player_id) LEFT JOIN `character` USING(char_id);
 
 -- # 5/10 TODO: check if this messes stuff up
@@ -1539,6 +1591,47 @@ AS
            CONCAT(player_nickname, ' (', player_username, ')') as "Display Name"
     FROM dungeonmaster LEFT JOIN player USING (player_id);
 
+# Fix this, then show as View #4
+DROP VIEW IF EXISTS private_campaign_partymember_details;
+CREATE VIEW private_campaign_partymember_details
+AS
+	SELECT player_partymember_details.ID, 
+		   player_partymember_details.`Player`,
+	       character_details.Name,
+           character_details.Gender,
+           character_details.`Overall Level`,
+           character_details.`Level Allocation`,
+           character_details.Race,
+           character_details.Speed,
+           character_details.Size,
+           character_details.Backstory,
+           character_details.Notes,
+           character_details.`Base HP`,
+           (character_details.Platinum * 10) + character_details.Gold + (character_details.Silver / .1) + (character_details.Copper / .01) as "Money",
+           group_concat(`Item` ORDER BY `Item` SEPARATOR', ') as "Inventory"
+	FROM player_partymember_details LEFT JOIN character_details ON player_partymember_details.`Character Name` = character_details.`Name`
+	    						    LEFT JOIN characterinventoryitem_details ON character_details.ID = characterinventoryitem_details.ID
+	GROUP BY character_details.`ID`
+	HAVING  character_details.`ID` IS NOT NULL
+	UNION
+	SELECT player_partymember_details.ID, 
+	       player_partymember_details.`Player`,
+	       character_details.Name,
+           character_details.Gender,
+           character_details.`Overall Level`,
+           character_details.`Level Allocation`,
+           character_details.Race,
+           character_details.Speed,
+           character_details.Size,
+           character_details.Backstory,
+           character_details.Notes,
+           character_details.`Base HP`,
+           (character_details.Platinum * 10) + character_details.Gold + (character_details.Silver / .1) + (character_details.Copper / .01) as "Money",
+           NULL as "Inventory"
+    FROM player_partymember_details LEFT JOIN character_details ON player_partymember_details.`Character Name` = character_details.`Name`
+        						    LEFT JOIN characterinventoryitem_details ON characterinventoryitem_details.ID = character_details.ID
+                                    WHERE characterinventoryitem_details.item_id IS NULL;
+                                
 # TODO: maybe drop this, and use col in dungeonmaster_details instead
 DROP FUNCTION IF EXISTS get_dm_display_name;
 DELIMITER $$
@@ -1570,6 +1663,23 @@ BEGIN
 END $$
 DELIMITER ;
 
+DROP FUNCTION IF EXISTS get_view_to_call_for_campaign_request;
+DELIMITER $$
+CREATE FUNCTION get_view_to_call_for_campaign_request(in_dm_id VARCHAR(255), in_campaign_id VARCHAR(255))
+RETURNS VARCHAR(255)
+DETERMINISTIC
+BEGIN
+	IF (SELECT dm_id FROM campaign WHERE campaign_id = in_campaign_id LIMIT 1) = in_dm_id
+    THEN
+		RETURN "private_campaign_partymember";
+	ELSE
+		RETURN "public_campaign_partymember";
+	END IF;
+END $$
+DELIMITER ;
+
+# SHow? Procedure #10?
+# TODO: add parameter and condition: param = player ID, condition-> get dm id and add as constraint
 DROP PROCEDURE IF EXISTS delete_record_in_table;
 DELIMITER $$
 CREATE PROCEDURE delete_record_in_table(in_table VARCHAR(255), in_conditions TEXT, delete_multi BOOLEAN)

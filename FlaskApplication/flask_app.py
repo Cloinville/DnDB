@@ -278,59 +278,11 @@ def create_details(entity):
         if request.form['submit_btn'] == "Quit":
             return redirect('/index')
         else:
-            in_entity_field_values = []
-            raw_multi_level_associative_metadata = []
-            single_level_associations = []
-            # associative_multi_parents = []
-            # associative_multi_children = []
-            # Probably not necessary for our current implementation \/
-            multi_level_associations_parents_to_children = {}
             chosen_entity = request.form["chosen_entity"]
-
-            for key in request.form:
-                print("{0}, {1}".format(key, request.form[key]))
-                if "insertassociativefor" in key:
-                    if key.endswith("_child"):
-                        parent_name = key[:-len("_child")]
-                        multi_level_associations_parents_to_children[parent_name] = request.form[key]
-
-                    elif not key.endswith("_options") and not key.endswith("_label") and not key.endswith("_field_type"):
-                        if key.startswith("dynamic") or key.startswith("static"):
-                            single_level_associations.append([key, request.form[key]])
-                        else:
-                            raw_multi_level_associative_metadata.append([key, request.form[key]])
-
-                    # DEBUGGING
-                    else:
-                        print("NOT ADDED: {0}".format(key))
-                        # END DEBUGGING
-
-                elif key != "chosen_entity" and key != "submit_btn":
-                    if request.form[key] != "":
-                        in_entity_field_values.append([key, request.form[key]])
-            
-            multi_level_curr_parent = None
-            multi_level_curr_children_list = []
-            multi_level_parent_with_children = []
-
-            for item in raw_multi_level_associative_metadata:
-                print("MULTILEVEL: {0}, {1}".format(item[0], item[1]))
-                if item[0].startswith("multibase_"):
-                    if multi_level_curr_parent != None:
-                        print("ADDING TO PARENT w/CHILDREN: {0}".format([multi_level_curr_parent, multi_level_curr_children_list]))
-                        multi_level_parent_with_children.append([multi_level_curr_parent, multi_level_curr_children_list])
-                        multi_level_curr_parent = item
-                        multi_level_curr_children_list = []
-                    else:
-                        multi_level_curr_parent = item
-                else:
-                    multi_level_curr_children_list.append(item)
-
-            if multi_level_curr_parent != None:
-                multi_level_parent_with_children.append([multi_level_curr_parent, multi_level_curr_children_list])
-                multi_level_curr_children_list = []
+            in_entity_field_values, single_level_associations, multi_level_parent_with_children = get_create_lists_from_request_form(request.form)
             
             new_id, error = insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values, single_level_associations, multi_level_parent_with_children)
+            
             if error == None:
                 return redirect(url_for('entity_details', entity=chosen_entity, entity_id = new_id))
             else:
@@ -480,23 +432,38 @@ def entity_details(entity, entity_id):
 
             delete_instructions = called_key.split("_DELETEFOR_")
             delete_table, first_delete_condition = delete_instructions
+
             first_pk_name = first_delete_condition.split("=")[0]
-            second_pk_name = execute_cmd_and_get_result("SELECT get_other_id_colname_from_associative('{0}', '{1}')".format(delete_table, first_pk_name))[0][0]
-            second_delete_condition = "{0}='{1}'".format(second_pk_name, entity_id)
+            if delete_table == "character_partymember":
+                delete_table = "partymember"
+                # 5/12 TODO: separate out all of these pieces and combine this w/the update function, maybe
+                # Doesn't need additional condition checks on the campaign ID and player ID since char_id is a unique field
+                # in partymember
+                delete_cmd = "UPDATE `{0}` SET char_id = NULL WHERE char_id = '{1}'".format(delete_table, entity_id)
+                print("DELETE CMD: {0}".format(delete_cmd))
+            else:
+                second_pk_name = execute_cmd_and_get_result("SELECT get_other_id_colname_from_associative('{0}', '{1}')".format(delete_table, first_pk_name))[0][0]
+                second_delete_condition = "{0}='{1}'".format(second_pk_name, entity_id)
 
-            full_delete_condition = "WHERE {0} AND {1}".format(first_delete_condition, second_delete_condition)
-            delete_multiple_records = 0
+                full_delete_condition = "WHERE {0} AND {1}".format(first_delete_condition, second_delete_condition)
+                delete_multiple_records = 0
 
-            delete_cmd = "CALL delete_record_in_table('{0}', '{1}', '{2}')".format(delete_table, full_delete_condition, delete_multiple_records)
-            print("DELETE CMD: {0}".format(delete_cmd))
-            execute_cmd(delete_cmd)
-
-            notification = ["SUCCESS", "Associated record successfully deleted"]
+                delete_cmd = "CALL delete_record_in_table('{0}', '{1}', '{2}')".format(delete_table, full_delete_condition, delete_multiple_records)
+                print("DELETE CMD: {0}".format(delete_cmd))
+            try:
+                execute_cmd(delete_cmd)
+                notification = ["SUCCESS", "Associated record successfully deleted"]
+            except Exception as e:
+                print(e)
+                notification = ["ERROR", "Failed to delete associative record"]
 
         elif method == "add":
             #TODO: handle this...
             print("METHOD: add - {0}".format(called_key))
-            notification = ["SUCCESS", "Associated record successfully added"]
+            in_entity_field_values, single_level_associations, multi_level_parent_with_children = get_create_lists_from_request_form(request.form)
+            notification = insert_associative_records_for_existing_base_entity_into_db(entity, entity_id, in_entity_field_values, single_level_associations, multi_level_parent_with_children)
+            if notification == None:
+                notification = ["SUCCESS", "Associated record successfully added"]
 
         elif method == "update":
             print("UPDATED VALUE: KEY: {0}, VALUE: {1}".format(called_key, request.form[called_key]))
@@ -615,6 +582,7 @@ def redirect_entity(associative_class_name, entity_id):
 
 
 # Delete full base entity
+# TODO: route through delete_record fn in mysql
 @app.route('/delete_entity/<entity>/<delete_id>', methods=['POST', 'GET'])
 def delete_entity(entity,delete_id):
     if entity == "character":
@@ -1018,7 +986,8 @@ def get_associative_attr_lists_for_entity_details(entity, entity_id, allow_recur
         preexisting_vals_calling_entity = linking_table
         if linking_table == "partymember":
             if entity == "campaign":
-                preexisting_vals_calling_entity = "player_partymember"
+                # preexisting_vals_calling_entity = "player_partymember"
+                preexisting_vals_calling_entity = execute_cmd_and_get_result("SELECT get_view_to_call_for_campaign_request({0}, {1})".format(logged_in_user_details['dm_id'], entity_id))[0][0]
             else:
                 preexisting_vals_calling_entity = "character_partymember"
         elif linking_table == "monsterencounter" and associated_table == "monsterencounter" and entity == "monsterparty":
@@ -1169,109 +1138,23 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
         # saved_base_entity = chosen_entity
         execute_partial_transaction_cmd(curr_cmd, cursor)
 
-        saved_base_pk_val, saved_base_pk_name = execute_partial_transaction_cmd_and_get_result("CALL get_most_recent_pk_val_and_pk_colname('{0}')".format(chosen_entity), cursor)[0][0]
+        base_pk_val, base_pk_name = execute_partial_transaction_cmd_and_get_result("CALL get_most_recent_pk_val_and_pk_colname('{0}')".format(chosen_entity), cursor)[0][0]
         
         # DEBUGGING
-        print("INSERTED PK AND VAL: {0}, {1}".format(saved_base_pk_val, saved_base_pk_name))
+        print("INSERTED PK AND VAL: {0}, {1}".format(base_pk_val, base_pk_name))
 
         # print("LAST_INSERT_ID: {0}".format(execute_partial_transaction_cmd_and_get_result("SELECT LAST_INSERT_ID()")))
         # END DEBUGGING
 
-        prev_possibly_repeatable_dynamic_inserts = []
+        insert_single_level_associations(base_pk_val, base_pk_name, chosen_entity, single_level_associations, cursor)
 
-        for single_level_association in single_level_associations:
-            if single_level_association[0].startswith("static"):
-                parsed_list = None
-                if single_level_association[0].startswith("static-dropdown"):
-                    parsed_list = get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(single_level_association[1])
-                else:
-                    parsed_list = get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(single_level_association[0])
-                print("SINGLE - STATIC: {0}".format(parsed_list))
-
-                curr_entity = parsed_list[0]
-
-                if curr_entity == "partymember" and chosen_entity == "character":
-                    # 5/7 TODO: CHECK THIS! \/
-                    curr_cmd = "CALL conditional_partymember_record_insert_for_character('{0}', '{1}', '{2}')".format(saved_base_pk_val, logged_in_user_details['player_id'], parsed_list[2])
-                    execute_partial_transaction_cmd(curr_cmd, cursor)
-                else:
-                    curr_col_list_str = "{0},{1}".format(saved_base_pk_name, parsed_list[1])
-                    curr_val_list_str = "'{0}','{1}','{2}'".format(saved_base_pk_val, parsed_list[2], single_level_association[1])
-
-                    curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
-                    print("STATIC INSERT CMD: {0}".format(curr_cmd))
-
-                    execute_partial_transaction_cmd(curr_cmd, cursor)
-            else:
-                parsed_list = get_insert_entity_and_col_name_from_embedded_associative_str(single_level_association[0])
-                print("SINGLE - DYNAMIC: {0}".format(parsed_list))
-
-                curr_entity = parsed_list[0]
-                curr_col_list_str = "{0},{1}".format(saved_base_pk_name, parsed_list[1])
-                curr_val_list_str = "'{0}','{1}'".format(saved_base_pk_val, single_level_association[1])
-                curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
-                print("DYNAMIC INSERT CMD: {0}".format(curr_cmd))
-
-                # if curr_entity == "characterlearnedlanguage":
-                #     # checks = " AND ".join([" = ".join(row) for row in list(zip(curr_col_list_str,["'{0}'".format(row) for row in curr_val_list_str]))])
-                #     checks = " AND ".join([" = ".join(row) for row in list(zip(curr_col_list_str.split(","), curr_val_list_str.split(",")))])
-                #     instance_check_cmd = "SELECT {0} FROM {1} WHERE {2}".format(curr_col_list_str, curr_entity, checks)
-                #     print("INSTANCE CHECK: {0}".format(instance_check_cmd))
-                #     existing_record = execute_partial_transaction_cmd_and_get_result(instance_check_cmd, cursor)
-                #     print("EXISTING RECORD: {0}".format(existing_record))
-
-                if curr_cmd not in prev_possibly_repeatable_dynamic_inserts:
-                    prev_possibly_repeatable_dynamic_inserts.append(curr_cmd)
-                    print("UNREPEATED DYNAMIC CMD")
-                    try:
-                        execute_partial_transaction_cmd(curr_cmd, cursor)
-                    except mysql.connector.Error as e:
-                        if e.errno == 1062:
-                            print("Duplicate insert - Skipped")
-                            pass
-                        else:
-                            raise e
-
-        for multi_level_association in multi_level_parent_with_children:
-            curr_base_pk_name = saved_base_pk_name
-            curr_base_pk_val = saved_base_pk_val
-
-            parent_name_and_value = multi_level_association[0]
-            children_list = multi_level_association[1]
-
-            associative_parent_parsed_list = get_insert_entity_and_col_name_from_embedded_associative_str(parent_name_and_value[0])
-            print("MULTI - PARENT: {0}".format(associative_parent_parsed_list))
-
-            curr_entity = associative_parent_parsed_list[0]
-            curr_col_list_str = "{0},{1}".format(curr_base_pk_name, associative_parent_parsed_list[1])
-            curr_val_list_str = "'{0}','{1}'".format(curr_base_pk_val, parent_name_and_value[1])
-
-            curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
-            print("MULTI - PARENT INSERT CMD: {0}".format(curr_cmd))
-
-            execute_partial_transaction_cmd(curr_cmd, cursor)
-
-            curr_base_pk_val, curr_base_pk_name = execute_partial_transaction_cmd_and_get_result("CALL get_most_recent_pk_val_and_pk_colname('{0}')".format(curr_entity), cursor)[0][0]
-
-            for child_name_and_value in children_list:
-                associative_child_parsed_list = get_insert_entity_and_col_name_from_embedded_associative_str(child_name_and_value[0])
-                print("MULTI - CHILD: {0}".format(associative_child_parsed_list))
-
-                curr_entity = associative_child_parsed_list[0]
-                curr_col_list_str = "{0},{1}".format(curr_base_pk_name, associative_child_parsed_list[1])
-                curr_val_list_str = "'{0}','{1}'".format(curr_base_pk_val, child_name_and_value[1])
-
-                curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
-
-                print("MULTI - CHILD INSERT CMD: {0}".format(curr_cmd))
-
-                execute_partial_transaction_cmd(curr_cmd, cursor)
+        insert_multi_level_associations(base_pk_val, base_pk_name, multi_level_parent_with_children, cursor)
 
         # END DEBUGGING
         db.commit()
         cursor.close()
         db.close()
-        return saved_base_pk_val, None
+        return base_pk_val, None
     except Exception as e:
         print("INSERT RECORD EXCEPTION - {0}".format(e))
         cursor.close()
@@ -1283,6 +1166,131 @@ def insert_new_base_entity_record_into_db(chosen_entity, in_entity_field_values,
 
         # rollback?
         return None, e
+
+
+def insert_associative_records_for_existing_base_entity_into_db(chosen_entity, entity_id, in_entity_field_values, single_level_associations, multi_level_parent_with_children):
+    try:
+        # DEBUGGING
+        print("CHOSEN ENTITY: {0}".format(chosen_entity))
+        print("DIRECT VALUES: {0}".format(in_entity_field_values))
+        print("SINGLE LEVEL ASSOCIATIONS: {0}".format(single_level_associations))
+        print("MULTILEVEL ASSOCIATIONS: {0}".format(multi_level_parent_with_children))
+
+        base_pk_val = entity_id
+        base_pk_name = execute_cmd_and_get_result("SELECT get_primary_key_name_from_table_name('{0}')".format(chosen_entity))[0][0]
+        
+        # insert for base entity
+        db = connect()
+        cursor = db.cursor()
+
+        insert_single_level_associations(base_pk_val, base_pk_name, chosen_entity, single_level_associations, cursor)
+
+        insert_multi_level_associations(base_pk_val, base_pk_name, multi_level_parent_with_children, cursor)
+
+        # END DEBUGGING
+        db.commit()
+        cursor.close()
+        db.close()
+        return None
+    except Exception as e:
+        print("INSERT RECORD EXCEPTION - {0}".format(e))
+        cursor.close()
+        db.close()
+
+        # # DEBUGGING
+        # raise e
+        # # END DEBUGGING
+        # # rollback?
+        return ["ERROR", "Failed to insert associative entity"]
+
+
+def insert_single_level_associations(base_pk_val, base_pk_name, chosen_entity, single_level_associations, cursor):
+    prev_possibly_repeatable_dynamic_inserts = []
+
+    for single_level_association in single_level_associations:
+        if single_level_association[0].startswith("static"):
+            parsed_list = None
+            if single_level_association[0].startswith("static-dropdown"):
+                parsed_list = get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(single_level_association[1])
+            else:
+                parsed_list = get_insert_entity_and_col_name_and_col_value_from_embedded_associative_str(single_level_association[0])
+            print("SINGLE - STATIC: {0}".format(parsed_list))
+
+            curr_entity = parsed_list[0]
+
+            if curr_entity == "partymember" and chosen_entity == "character":
+                # 5/7 TODO: CHECK THIS! \/
+                curr_cmd = "CALL conditional_partymember_record_insert_for_character('{0}', '{1}', '{2}')".format(base_pk_val, logged_in_user_details['player_id'], parsed_list[2])
+                execute_partial_transaction_cmd(curr_cmd, cursor)
+            else:
+                curr_col_list_str = "{0},{1}".format(base_pk_name, parsed_list[1])
+                curr_val_list_str = "'{0}','{1}','{2}'".format(base_pk_val, parsed_list[2], single_level_association[1])
+
+                curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
+                print("STATIC INSERT CMD: {0}".format(curr_cmd))
+
+                execute_partial_transaction_cmd(curr_cmd, cursor)
+        else:
+            parsed_list = get_insert_entity_and_col_name_from_embedded_associative_str(single_level_association[0])
+            print("SINGLE - DYNAMIC: {0}".format(parsed_list))
+
+            curr_entity = parsed_list[0]
+            curr_col_list_str = "{0},{1}".format(base_pk_name, parsed_list[1])
+            curr_val_list_str = "'{0}','{1}'".format(base_pk_val, single_level_association[1])
+            curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
+            print("DYNAMIC INSERT CMD: {0}".format(curr_cmd))
+
+            if curr_cmd not in prev_possibly_repeatable_dynamic_inserts:
+                prev_possibly_repeatable_dynamic_inserts.append(curr_cmd)
+                print("UNREPEATED DYNAMIC CMD")
+                try:
+                    execute_partial_transaction_cmd(curr_cmd, cursor)
+                except mysql.connector.Error as e:
+                    if e.errno == 1062:
+                        print("Duplicate insert - Skipped")
+                        pass
+                    else:
+                        raise e
+
+
+def insert_multi_level_associations(base_pk_val, base_pk_name, multi_level_parent_with_children, cursor):
+    saved_base_pk_name = base_pk_name
+    saved_base_pk_val = base_pk_val
+
+    for multi_level_association in multi_level_parent_with_children:
+        curr_base_pk_name = saved_base_pk_name
+        curr_base_pk_val = saved_base_pk_val
+
+        parent_name_and_value = multi_level_association[0]
+        children_list = multi_level_association[1]
+
+        associative_parent_parsed_list = get_insert_entity_and_col_name_from_embedded_associative_str(parent_name_and_value[0])
+        print("MULTI - PARENT: {0}".format(associative_parent_parsed_list))
+
+        curr_entity = associative_parent_parsed_list[0]
+        curr_col_list_str = "{0},{1}".format(curr_base_pk_name, associative_parent_parsed_list[1])
+        curr_val_list_str = "'{0}','{1}'".format(curr_base_pk_val, parent_name_and_value[1])
+
+        curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
+        print("MULTI - PARENT INSERT CMD: {0}".format(curr_cmd))
+
+        execute_partial_transaction_cmd(curr_cmd, cursor)
+
+        curr_base_pk_val, curr_base_pk_name = execute_partial_transaction_cmd_and_get_result("CALL get_most_recent_pk_val_and_pk_colname('{0}')".format(curr_entity), cursor)[0][0]
+
+        for child_name_and_value in children_list:
+            associative_child_parsed_list = get_insert_entity_and_col_name_from_embedded_associative_str(child_name_and_value[0])
+            print("MULTI - CHILD: {0}".format(associative_child_parsed_list))
+
+            curr_entity = associative_child_parsed_list[0]
+            curr_col_list_str = "{0},{1}".format(curr_base_pk_name, associative_child_parsed_list[1])
+            curr_val_list_str = "'{0}','{1}'".format(curr_base_pk_val, child_name_and_value[1])
+
+            curr_cmd = "CALL insert_record('{0}', '{1}', '{2}')".format(curr_entity, curr_col_list_str, curr_val_list_str)
+
+            print("MULTI - CHILD INSERT CMD: {0}".format(curr_cmd))
+
+            execute_partial_transaction_cmd(curr_cmd, cursor)
 
 
 def level_up_character_in_db(char_id, class_id, new_hp, new_spells):
@@ -1300,6 +1308,73 @@ def level_up_character_in_db(char_id, class_id, new_hp, new_spells):
     except Exception as e:
         print(e)
         return
+
+
+def get_create_lists_from_request_form(request_form):
+    in_entity_field_values = []
+    raw_multi_level_associative_metadata = []
+    single_level_associations = []
+
+    # Probably not necessary for our current implementation \/
+    multi_level_associations_parents_to_children = {}
+    # chosen_entity = request_form["chosen_entity"]
+
+    for key in request_form:
+        value = request_form[key]
+
+        print("{0}, {1}".format(key, value))
+        if "insertassociativefor" in key:
+            if key.endswith("_child"):
+                parent_name = key[:-len("_child")]
+                multi_level_associations_parents_to_children[parent_name] = value
+
+            elif not key.endswith("_options") and not key.endswith("_label") and not key.endswith("_field_type"):
+                if key.startswith("dynamic") or key.startswith("static"):
+                    single_level_associations.append([key, value])
+                else:
+                    raw_multi_level_associative_metadata.append([key, value])
+
+            # DEBUGGING
+            else:
+                print("NOT ADDED: {0}".format(key))
+                # END DEBUGGING
+
+        elif key != "chosen_entity" and key != "submit_btn":
+            if value != "":
+                in_entity_field_values.append([key, value])
+        
+    multi_level_parent_with_children = get_multi_level_parent_and_children_list_from_raw_multilevel_associative_metadata(raw_multi_level_associative_metadata)
+              
+    return in_entity_field_values, single_level_associations, multi_level_parent_with_children
+
+
+def get_multi_level_parent_and_children_list_from_raw_multilevel_associative_metadata(raw_multi_level_associative_metadata):
+    multi_level_curr_parent = None
+    multi_level_curr_children_list = []
+    multi_level_parent_with_children = []
+
+    for item in raw_multi_level_associative_metadata:
+        print("MULTILEVEL: {0}, {1}".format(item[0], item[1]))
+
+        if item[0].startswith("multibase_"):
+            if multi_level_curr_parent != None:
+                print("ADDING TO PARENT w/CHILDREN: {0}".format([multi_level_curr_parent, multi_level_curr_children_list]))
+                
+                multi_level_parent_with_children.append([multi_level_curr_parent, multi_level_curr_children_list])
+                multi_level_curr_parent = item
+                multi_level_curr_children_list = []
+            else:
+                multi_level_curr_parent = item
+        else:
+            multi_level_curr_children_list.append(item)
+
+    # Handle any hanging values
+    if multi_level_curr_parent != None:
+        multi_level_parent_with_children.append([multi_level_curr_parent, multi_level_curr_children_list])
+        multi_level_curr_children_list = []
+    
+    return multi_level_parent_with_children
+
 
 # TODO: replace every other instance of execute to get fetchall() with this
 def execute_cmd_and_get_result(cursor_cmd, multiple_args=True):
