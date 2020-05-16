@@ -291,7 +291,7 @@ def create_details(entity):
 
     chosen_entity = entity
 
-    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity)
+    alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, False)
 
     include_creator_id = False
     fk_set_list = get_fk_set_list(chosen_entity, include_creator_id)
@@ -674,7 +674,7 @@ def password_invalid(password):
     return re.search(r'[^a-zA-Z0-9_]', password)
 
 
-def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs=True):
+def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_dropdown_defaults=True, include_text_attrs=True):
     attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}')".format(chosen_entity))
 
     # List format: [(name, datatype), (name, datatype), ...]
@@ -691,7 +691,8 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_text_attrs=True)
         # If an enum, convert all of the allowed values into a list, and associate list w/attr name
         if "enum" in attr_datatype:
             enum_vals = [enum_val[1:-1] if enum_val[0] == "'" and enum_val[len(enum_val) - 1] == "'" else enum_val for enum_val in attr_datatype.split("enum")[1][1:-1].split(",")]
-            enum_vals.insert(0, default_dropdown_str)
+            if include_dropdown_defaults:
+                enum_vals.insert(0, default_dropdown_str)
             enum_attr_list.append([attr_name, enum_vals])
         else:
             if "text" not in attr_datatype or include_text_attrs:
