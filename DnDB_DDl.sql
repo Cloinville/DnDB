@@ -1,4 +1,5 @@
 USE csuciklo_dndb;
+
 -- # Saved list of all table drops for cleaning while finalizing structure
 -- # TODO: 1. Remove this once no longer needed, BEFORE final submission!
 -- #	   2. Add "password" field to player in CREATE TABLE statement

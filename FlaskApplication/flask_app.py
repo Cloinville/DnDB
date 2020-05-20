@@ -20,7 +20,7 @@ logged_in_user_details = {'username': None, 'nickname': None, 'player_id': None,
 # logged_in_user = None
 # logged_in_user_nickname = ""
 default_dropdown_str = ""
-searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill']
+searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill', 'Ability', 'Weapon', 'School of Magic']
 # creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
 creatable_entities = ['character', 'campaign', 'monsterparty']
 associative_entity_redirects = { 'characterabilityscore' : 'ability', 'characterinventoryitem' : "item", 'characterlearnedlanguage' : 'language', 'character_partymember' : 'campaign',
@@ -316,6 +316,8 @@ def search():
 
     if request.method == 'POST':
         chosen_entity = request.form['chosen_entity']
+        if chosen_entity == "School of Magic":
+            chosen_entity = "schoolofmagic"
         search_fields_url = "search_fields_template/{0}".format(chosen_entity.lower())
 
         # DEBUGGING
@@ -705,7 +707,9 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_dropdown_default
 # TODO - combine this with above function once figure out clean way to do so
 def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, id_val, prep_id_as_link=False, include_text_attrs=True):
     # TODO: modify DB end so not need to include "_details" in this call, but auto selects from details panel instead? => ISSUE: lose foreign key info...
-    attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}_details')".format(chosen_entity))
+    # 5/20: NOTE: line below WAS MOSTLY working
+    # attr_datatype_list = execute_cmd_and_get_result("CALL get_non_foreign_key_column_names_and_datatypes('{0}_details')".format(chosen_entity))
+    attr_datatype_list = execute_cmd_and_get_result("CALL get_all_column_names_and_datatypes('{0}_details')".format(chosen_entity))
 
     values_with_readonly_information = execute_cmd_and_get_result("CALL get_direct_entity_details('{0}', '{1}', '{2}')".format(chosen_entity, id_val, logged_in_user_details['player_id']))
     
