@@ -1,4 +1,5 @@
-use csuciklo_dndb;
+# use csuciklo_dndb;
+USE csuciklo_COMP420_DnDB;
 
 DROP TRIGGER IF EXISTS default_player_nickname;
 DELIMITER $$
@@ -31,7 +32,8 @@ BEGIN
     
 	SELECT column_name, column_type
 	FROM INFORMATION_SCHEMA.columns
-	WHERE table_schema="csuciklo_dndb"
+-- 	WHERE table_schema="csuciklo_dndb"
+	WHERE table_schema="csuciklo_COMP420_DnDB"
 		  AND table_name = modified_entity_name
 		  AND column_key != "MUL";
 END $$
@@ -45,7 +47,8 @@ CREATE FUNCTION get_select_for_foreign_key_columns_and_referenced_table_names(en
 RETURNS TEXT
 DETERMINISTIC
 BEGIN
-	RETURN CONCAT("SELECT column_name, referenced_table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema = 'csuciklo_dndb' AND table_name = '", entity, "' AND referenced_table_name IS NOT NULL");
+-- RETURN CONCAT("SELECT column_name, referenced_table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema = 'csuciklo_dndb' AND table_name = '", entity, "' AND referenced_table_name IS NOT NULL");
+	RETURN CONCAT("SELECT column_name, referenced_table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema = 'csuciklo_COMP420_DnDB' AND table_name = '", entity, "' AND referenced_table_name IS NOT NULL");
 END $$
 DELIMITER ;
 
@@ -207,7 +210,8 @@ BEGIN
     
 	SELECT column_name, column_type
 	FROM INFORMATION_SCHEMA.columns
-	WHERE table_schema="csuciklo_dndb"
+-- 	WHERE table_schema="csuciklo_dndb"
+	WHERE table_schema="csuciklo_COMP420_DnDB"
 		  AND table_name = modified_table_name;
 END $$
 DELIMITER ;
@@ -268,7 +272,8 @@ BEGIN
 		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'spell_id' as 'spell_id', 'Name' as 'Name', 'School of Magic' as 'School of Magic', 'Spell Level' as 'Spell Level' UNION SELECT 'spell_id' as 'identifier', 'spell' as 'entity', spell_id as 'spell_id', spell_name as 'Name', magicschool_name as 'School of Magic', spell_min_level as 'Spell Level' FROM spell LEFT JOIN schoolofmagic USING(magicschool_id)";
 	ELSEIF entity = "item"
     THEN
-		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'item.item_id' as 'item.item_id', 'Name' as 'Name', 'Rarity' as 'Rarity', 'Type' as 'Type' UNION SELECT 'item.item_id' as 'identifier', 'item' as 'entity', item.item_id as 'item.item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM item LEFT JOIN weapon USING(item_id) UNION SELECT 'item.item_id' as 'identifier', 'item' as 'entity', item.item_id as 'item.item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM weapon LEFT JOIN item USING(item_id)";
+-- 		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'item.item_id' as 'item.item_id', 'Name' as 'Name', 'Rarity' as 'Rarity', 'Type' as 'Type' UNION SELECT 'item.item_id' as 'identifier', 'item' as 'entity', item.item_id as 'item.item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM item LEFT JOIN weapon USING(item_id) UNION SELECT 'item.item_id' as 'identifier', 'item' as 'entity', item.item_id as 'item.item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM weapon LEFT JOIN item USING(item_id)";
+		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'item.item_id' as 'item.item_id', 'Name' as 'Name', 'Rarity' as 'Rarity', 'Type' as 'Type' UNION SELECT 'item.item_id' as 'identifier', 'item' as 'entity', item.item_id as 'item.item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM item LEFT JOIN weapon USING(item_id)";
 	ELSEIF  entity = "weapon"
     THEN
 		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'item_id' as 'item_id', 'Name' as 'Name', 'Rarity' as 'Rarity', 'Type' as 'Type' UNION SELECT 'item_id' as 'identifier', 'weapon' as 'entity', item_id as 'item_id', item_name as 'Name', item_rarity as 'Rarity', item_type as 'Type' FROM weapon LEFT JOIN item USING(item_id)";
@@ -289,7 +294,10 @@ BEGIN
 		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'campaign_id' as 'campaign_id', 'DM' as 'DM', 'Campaign Name' as 'Campaign Name', 'Adventuring Party' as 'Adventuring Party' UNION SELECT 'campaign_id' as 'identifier', 'campaign' as 'entity', campaign_id as 'campaign_id', player_nickname as 'DM', campaign_name as 'Campaign Name', campaign_party_name as 'Adventuring Party' FROM campaign JOIN dungeonmaster USING(dm_id) JOIN player USING(player_id) LEFT JOIN partymember USING(campaign_id)";
     ELSEIF entity = "schoolofmagic"
 	THEN
-		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'magicschool_id' as 'magicschool_id', 'magicschool_name' as 'Name' UNION SELECT 'magicschool_id' as 'identifier', 'schoolofmagic' as 'entity', magicschool_id as 'magicschool_id', magicschool_name as 'Name' FROM schoolofmagic";
+		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'magicschool_id' as 'magicschool_id', 'Name' as 'Name' UNION SELECT 'magicschool_id' as 'identifier', 'schoolofmagic' as 'entity', magicschool_id as 'magicschool_id', magicschool_name as 'Name' FROM schoolofmagic";
+    ELSEIF entity = "ability"
+    THEN
+		SET select_stmt = "SELECT 'identifier' as 'identifier', 'entity' as 'entity', 'ability_id' as 'ability_id', 'Ability Name' as 'Ability Name' UNION SELECT 'ability_id' as 'identifier', 'ability' as 'entity', ability_id as 'ability_id', ability_name as 'Ability Name' FROM ability";
     ELSE
 		SET select_stmt = CONCAT("SELECT * FROM ", entity);
 	END IF;
@@ -310,7 +318,8 @@ BEGIN
 	SELECT column_name 
     INTO primary_key_name
     FROM INFORMATION_SCHEMA.columns 
-    WHERE table_schema="csuciklo_dndb" 
+--     WHERE table_schema="csuciklo_dndb" 
+    WHERE table_schema="csuciklo_COMP420_DnDB" 
 		  AND table_name = in_table_name 
           AND column_key = "PRI"
 	LIMIT 1;
@@ -568,9 +577,11 @@ DETERMINISTIC
 BEGIN
 IF in_table = 'monsterparty'
      THEN
- 		RETURN CONCAT("SELECT key_cols.table_name as 'table_name', key_cols.table_name as 'referenced_table_name', cols.column_name as 'referenced_column_name' FROM INFORMATION_SCHEMA.key_column_usage as key_cols JOIN INFORMATION_SCHEMA.columns as cols USING(table_name) WHERE key_cols.table_schema = 'csuciklo_dndb' AND key_cols.referenced_table_name = '", in_table, "' AND column_key = 'PRI'");
+--  		RETURN CONCAT("SELECT key_cols.table_name as 'table_name', key_cols.table_name as 'referenced_table_name', cols.column_name as 'referenced_column_name' FROM INFORMATION_SCHEMA.key_column_usage as key_cols JOIN INFORMATION_SCHEMA.columns as cols USING(table_name) WHERE key_cols.table_schema = 'csuciklo_dndb' AND key_cols.referenced_table_name = '", in_table, "' AND column_key = 'PRI'");
+ 		RETURN CONCAT("SELECT DISTINCT key_cols.table_name as 'table_name', key_cols.table_name as 'referenced_table_name', cols.column_name as 'referenced_column_name' FROM INFORMATION_SCHEMA.key_column_usage as key_cols JOIN INFORMATION_SCHEMA.columns as cols USING(table_name) WHERE key_cols.table_schema = 'csuciklo_COMP420_DnDB' AND key_cols.referenced_table_name = '", in_table, "' AND column_key = 'PRI'");
  	ELSE
-		RETURN CONCAT("SELECT table_name, referenced_table_name, referenced_column_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_dndb' AND table_name IN (SELECT table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_dndb' AND referenced_table_name = '", in_table, "') AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_TABLE_NAME != '", in_table, "'");
+-- 		RETURN CONCAT("SELECT table_name, referenced_table_name, referenced_column_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_dndb' AND table_name IN (SELECT table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_dndb' AND referenced_table_name = '", in_table, "') AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_TABLE_NAME != '", in_table, "'");
+		RETURN CONCAT("SELECT table_name, referenced_table_name, referenced_column_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_COMP420_DnDB' AND table_name IN (SELECT table_name FROM INFORMATION_SCHEMA.key_column_usage WHERE table_schema='csuciklo_COMP420_DnDB' AND referenced_table_name = '", in_table, "') AND REFERENCED_TABLE_NAME IS NOT NULL AND REFERENCED_TABLE_NAME != '", in_table, "'");
  	END IF;
 END $$
 DELIMITER ;
@@ -605,7 +616,10 @@ DELIMITER $$
 CREATE PROCEDURE get_associated_table_and_fkcol_names_for_create(in_table VARCHAR(255))
 BEGIN
 	DECLARE select_condition TEXT DEFAULT "";
-    IF in_table = 'campaign'
+    IF in_table = 'ability'
+    THEN
+		SET select_condition = "AND table_name != 'characterabilityscore' AND table_name != 'monsterabilityscore' AND table_name != 'raceabilityscoremodifier'";
+    ELSEIF in_table = 'campaign'
     THEN
 		SET select_condition = "AND table_name != 'dungeonmaster' AND table_name != 'monsterparty' AND table_name != 'monster' AND referenced_table_name != 'character'";
 	ELSEIF in_table = 'character'
@@ -613,13 +627,13 @@ BEGIN
 		SET select_condition = "AND referenced_table_name != 'player' AND referenced_table_name != 'class'";
     ELSEIF in_table = 'class'
     THEN
-		SET select_condition = "AND table_name != 'levelallocation'";
+		SET select_condition = "AND table_name != 'levelallocation' AND table_name != 'classlearnablespell'";
 	ELSEIF in_table = 'item'
     THEN
 		SET select_condition = "AND table_name != 'monsterlootitem' AND table_name != 'characterinventoryitem' AND table_name != 'weapon'";
 	ELSEIF in_table = 'language'
     THEN
-		SET select_condition = "AND table_name != 'characterlearnedlanguage'";
+		SET select_condition = "AND table_name != 'characterlearnedlanguage' AND table_name != 'raceknownlanguage'";
 	ELSEIF in_table = 'monster'
     THEN
 		SET select_condition = "AND table_name != 'monsterencounter'";
@@ -628,7 +642,10 @@ BEGIN
 		SET select_condition = "AND table_name != 'character'";
 	ELSEIF in_table = 'spell'
     THEN
-		SET select_condition = "AND table_name != 'learnedspell'";
+		SET select_condition = "AND table_name != 'learnedspell' AND table_name != 'classlearnablespell'";
+	ELSEIF in_table = 'schoolofmagic'
+    THEN
+		SET select_condition = "AND table_name != 'spell'";
 	END IF;
     CALL get_associated_table_and_fkcol_names_using_condition(in_table, select_condition);
 END $$
@@ -665,6 +682,9 @@ BEGIN
     IF in_table = "characterabilityscore"
     THEN
 		SET in_col_addition = ",charabilityscore_value";
+	ELSEIF in_table = "monsterabilityscore"
+    THEN
+		SET in_col_addition = ",monsterabilityscore_value";
 	END IF;
     
     SET @query = CONCAT("INSERT INTO ", usable_tbl_name, "(", in_col_list, in_col_addition, ") VALUES(", in_values, ")");
@@ -908,7 +928,7 @@ BEGIN
                allow_edits as "Party Name"
         UNION ALL
         SELECT * FROM campaign_details WHERE ID = primary_key_value;
-	ELSEIF entity = "campaign_private_partymember_details"
+	ELSEIF entity = "private_campaign_partymember"
     THEN
 		# No setting edits allowed for associative entities
 		SELECT "NO" as "ID", 
@@ -926,8 +946,8 @@ BEGIN
                "NO" as "Money",
                "NO" as "Inventory"
 		UNION ALL
-		SELECT * FROM campaign_private_partymember_details WHERE ID = primary_key_value;
-	ELSEIF entity = "campaign_public_partymember_details"
+		SELECT * FROM private_campaign_partymember_details WHERE ID = primary_key_value;
+	ELSEIF entity = "public_campaign_partymember"
     THEN
 		# No edits allowed for associative entities
 		SELECT "NO" as "ID",
@@ -935,7 +955,7 @@ BEGIN
                "NO" as "Character Name",
                "NO" as "Class"
 		UNION ALL
-        SELECT * FROM campaign_public_partymember_details WHERE ID = primary_key_value;
+        SELECT * FROM public_campaign_partymember_details WHERE ID = primary_key_value;
 	ELSEIF entity = "character"
     THEN
 		SET creator_id = (SELECT player_id FROM `character` WHERE char_id = primary_key_value AND player_id = in_player_id);
@@ -979,8 +999,7 @@ BEGIN
 		# 5/7 STUB
 		SELECT "NO" as "ID",
                "NO" as "item_id",
-               "NO" as "Item",
-               "NO" as "Counter" # TODO: Delete this from view
+               "NO" as "Item"
         UNION ALL
 		SELECT * FROM characterinventoryitem_details WHERE ID = primary_key_value;
 	ELSEIF entity = "characterlearnedlanguage"
@@ -1170,7 +1189,6 @@ BEGIN
     THEN
 		# 5/7 STUB
         SELECT "NO" as "ID", 
-			   "NO" as "Is Playable", 
                "NO" as "Name", 
                "NO" as "Description", 
                "NO" as "Speed", 
@@ -1181,8 +1199,7 @@ BEGIN
 	ELSEIF entity = "raceabilityscoremodifier"
     THEN
 		# 5/7 STUB
-        SELECT "NO" as "ID", 
-			   "NO" as "Race", # 5/20: NOTE: this is forced work around since view won't drop
+        SELECT "NO" as "ID",
                "NO" as "race_id",
                "NO" as "Ability",
                "NO" as "Score"
@@ -1222,10 +1239,11 @@ BEGIN
 			   "NO" as "Spell Name",
                "NO" as "Description",
                "NO" as "Minimum Level",
+               "NO" as "Range",
                "NO" as "Casting Time",
                "NO" as "Duration",
                "NO" as "Is Concentration",
-               "NO" as "Spell Material",
+               "NO" as "Material Components",
                "NO" as "School of Magic",
                "NO" as "Creator ID"
         UNION ALL
@@ -1352,8 +1370,7 @@ CREATE VIEW characterinventoryitem_details
 AS	
     SELECT char_id as "ID",	
 		   item_id,	
-		   item_name as "Item",	
-		   characterinventoryitem_counter	
+		   item_name as "Item"	
     FROM characterinventoryitem left join `character` using (char_id) 	
 								left join item using(item_id);
 
@@ -1623,6 +1640,7 @@ AS
 		   spell_casting_time as "Cast Time",	
 		   spell_duration as "Duration",	
 		   spell_is_concentration as "Concentration",	
+           spell_material as "Material Components",
 		   magicschool_name as "School of Magic",
            CONCAT(player_nickname, ' (', player_username, ')') as "Creator"
 	FROM spell LEFT JOIN schoolofmagic using(magicschool_id)
@@ -1691,7 +1709,8 @@ DETERMINISTIC
 BEGIN
 	RETURN ( SELECT column_name
 		     FROM INFORMATION_SCHEMA.columns 
-			 WHERE table_schema="csuciklo_dndb" 
+			 -- WHERE table_schema="csuciklo_dndb" 
+             WHERE table_schema="csuciklo_COMP420_DnDB" 
 				   AND table_name = in_table
                    AND column_key = "PRI"
                    AND RIGHT(column_name, 3) = "_id"
@@ -1880,8 +1899,8 @@ DELIMITER ;
 DROP TRIGGER IF EXISTS delete_monster_party_trigger;
 DELIMITER $$
 CREATE TRIGGER delete_monster_party_trigger 
-BEFORE DELETE 
-  ON monsterparty FOR EACH ROW
+BEFORE DELETE ON monsterparty 
+FOR EACH ROW
 BEGIN
   
   DELETE FROM monsterencounter WHERE 
@@ -1893,13 +1912,36 @@ DELIMITER ;
 DROP TRIGGER IF EXISTS delete_monster_encounter_trigger;
 DELIMITER $$
 CREATE TRIGGER delete_monster_encounter_trigger 
-BEFORE DELETE 
-  ON monsterencounter FOR EACH ROW
+BEFORE DELETE ON monsterencounter 
+FOR EACH ROW
 BEGIN
   
   DELETE FROM monsterlootitem WHERE 
     old.encounter_id = monsterlootitem.encounter_id;
 
+END $$
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS create_player_for_dm;
+DELIMITER $$
+CREATE TRIGGER create_player_for_dm
+BEFORE INSERT ON dungeonmaster
+FOR EACH ROW
+BEGIN
+	DECLARE player_default_username VARCHAR(32) DEFAULT "default_";
+    DECLARE next_player_id INT DEFAULT NULL;
+	IF NEW.player_id IS NULL
+    THEN
+-- 		signal sqlstate '45000' set message_text = "NULL PLAYER";
+		SELECT IFNULL(count(*),0) + 1 INTO next_player_id FROM player;
+        IF next_player_id = 1
+        THEN
+			INSERT INTO player(player_id,player_username,player_nickname,player_password) VALUES(next_player_id,"", "Base Game", "");
+		ELSE
+			INSERT INTO player(player_id,player_username,player_nickname,player_password) VALUES(next_player_id,CONCAT(player_default_username, next_player_id), "DEFAULT", "");
+		END IF;
+		SET NEW.player_id = next_player_id;
+	END IF;
 END $$
 DELIMITER ;
 

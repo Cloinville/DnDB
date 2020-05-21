@@ -3,6 +3,7 @@
         <link href="../static/styles/style.css" rel="stylesheet" type="text/css">
     </head>
     <body>
+        <div class="center_content_iframe">
         <form action="{{ url_for('search_result') }}" target="_PARENT" method="POST" autocomplete="off">
             <table>
                 <tr>
@@ -88,11 +89,12 @@
                 </tr>
                 {% endfor %}
                 <tr>
-                    <td>
+                    <td colspan="2">
                         <input type="submit" value="Search">
                     </td>
                 </tr>
             </table>
         </form>
+    </div>
     </body>
 </html>

@@ -34,11 +34,12 @@
         {% if notification != None %}
             <div class="notification_{{notification[0]}}">
                 <p>
-                    {{notification[0]}} : {{notification[1]}}
+                    {{notification[0]}}: {{notification[1]}}
                 </p>
             </div>
         {% endif %}
         <h1 class="page_title">{{ chosen_entity[0]|upper}}{{chosen_entity[1:] }} Details</h1>
+        <div class="center_content">
         {% set can_edit = [] %}
         <form action="" method="POST" autocomplete="off">
             <!-- Input below is a hidden field used to pass the chosen_entity value to the search_result page -->
@@ -53,7 +54,7 @@
                         {% set keyable_attr_name = alphanumeric_attr_with_datatype[0] | replace(" ", "-") %}
                         <tr>
                             <td>
-                                {{alphanumeric_attr_with_datatype[0]}} : 
+                                {{alphanumeric_attr_with_datatype[0]}}: 
                             </td>
                             <td>
                                 {% if alphanumeric_attr_with_datatype[2] | int >= 2048 %}
@@ -74,7 +75,7 @@
                         {% set keyable_attr_name = enum_attr[0] | replace(" ", "-") %}
                         <tr>
                             <td>
-                                <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                                <label for={{enum_attr[0]}}>{{enum_attr[0]}}: </label>
                             </td>
                             <td>
                                 <select id={{keyable_attr_name}} name={{keyable_attr_name}} {{enum_attr_2}}>
@@ -103,7 +104,7 @@
                 {% for direct_attr_value_and_template_set in direct_attr_list %}
                     <!-- TODO: This might not be correct placement for form, check -->
                     <form action="" method="POST" autocomplete="off">
-                        <table class="directattr_tbl">
+                        <table class="directattr_tbl" style="margin-bottom:10px">
 
                         {% set direct_attr_link_alpha_enum_values_set = direct_attr_value_and_template_set[0] %}
                         {% set associative_dynamic_additions_generation_info = direct_attr_value_and_template_set[1] %}
@@ -113,14 +114,12 @@
                             {% set associative_alphanumeric_vals_and_info = direct_attr_set[1] %}
                             {% set associative_enum_vals_and_info = direct_attr_set[2] %}
 
-                            {% set included_link = "false" %}
                             {% set associative_link = "" %}
                             {% if associative_link_info|length >= 2 %}
                                 {% set associative_link = url_for('redirect_entity', associative_class_name=associative_link_info[0], entity_id=associative_link_info[2]) %}
                                 {% set associative_delete_btn_name = "deletebtn_" ~ associative_link_info[0] ~ "_DELETEFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %}
                                 <!-- {% set associative_add_btn_name = "addbtn_" ~ associative_link_info[0] ~ "_ADDFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %} -->
                             {% endif %}
-                            <p> LINK: {{associative_link}}</p>
 
                             <!-- <p> ASSOCIATIVE LINK INFO: {{associative_link_info}}</p> -->
 
@@ -129,26 +128,35 @@
                             <tr> <!-- Row per associative item type ie. direct_attr_set -->
                                 <td>
                                     <table class="directassociativevals_tbl">
-                                        <p> LINK: {{associative_link}}</p>
-                                        {% for alphanumeric_attr_with_datatype in associative_alphanumeric_vals_and_info %}
-                                            <tr>
-                                                <td>
-                                                    {% if included_link == "false" %}
-                                                        <a href="{{associative_link}}">{{alphanumeric_attr_with_datatype[0]}} : </a>
-                                                        {% set included_link = "true" %}
-                                                    {% else %}
-                                                        {{alphanumeric_attr_with_datatype[0]}} : 
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
+                                        {% if associative_alphanumeric_vals_and_info|length > 0 %}
+                                        <tr>
+                                            <td>
+                                                <table>
+                                                    {% for alphanumeric_attr_with_datatype in associative_alphanumeric_vals_and_info %}
+                                                    <tr>
+                                                        <td>
+                                                            {{alphanumeric_attr_with_datatype[0]}}: 
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </table>
+                                            </td>
+                                            <td>
+                                                {% if can_edit and associative_link_info[0] != "characterabilityscore" and associative_link_info[0] != "monsterabilityscore" %} <!-- And is Page Owner -->
+                                                <div class="x_delete_btn">
+                                                    <input type="submit" name="{{associative_delete_btn_name}}" value="x">
+                                                </div>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endif %}
                                         {% for enum_attr in associative_enum_vals_and_info %}
                                             <tr>
                                                 <td>
-                                                    <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                                                    <label for={{enum_attr[0]}}>{{enum_attr[0]}}: </label>
                                                 </td>
                                                 <td>
                                                     <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
@@ -161,15 +169,17 @@
                                                         {% endfor %}
                                                     </select>
                                                 </td>
+                                                {% if can_edit and associative_link_info[0] != "characterabilityscore" and associative_link_info[0] != "monsterabilityscore" %} <!-- And is Page Owner -->
+                                                <td>
+                                                    <div class="x_delete_btn">
+                                                        <input type="submit" name="{{associative_delete_btn_name}}" value="x">
+                                                    </div>
+                                                </td>
+                                            {% endif %}
                                             </tr>
                                         {% endfor %}
                                     </table>
                                 </td>
-                                {% if can_edit and associative_link_info[0] != "characterabilityscore" and associative_link_info[0] != "monsterabilityscore" %} <!-- And is Page Owner -->
-                                    <td>
-                                        <input type="submit" name="{{associative_delete_btn_name}}" value="DELETE">
-                                    </td>
-                                {% endif %}
                             </tr>
                         {% endfor %}
                         </table>
@@ -193,7 +203,7 @@
                                                 <tr>
                                                     {% for option in option_fk_set[2] %}
                                                         <td>
-                                                            {{option[0]}} :
+                                                            {{option[0]}}:
                                                         </td>
                                                         <td>
                                                             <!-- <input type="text" name="{{option_fk_set[1]}}={{option[2]}}" required> -->
@@ -215,7 +225,7 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td colspan="2">
+                                                    <td colspan="2" align="center">
                                                         {% if can_edit %}
                                                             <input type="submit" name="addbtn_ADDFOR_{{associative_prefix}}" value="Save Additions" />
                                                         {% endif %}
@@ -233,7 +243,7 @@
                                 <tr>
                                     <td>
                                         <input type="text" id="{{associative_prefix}}_field_type" name="{{associative_prefix}}_field_type" value="select" style="display:none">
-                                        <label for={{option[0]}}>Add {{ option[0][0]|upper}}{{option[0][1:] }}(s) : </label>
+                                        <label for={{option[0]}}>Add {{ option[0][0]|upper}}{{option[0][1:] }}(s): </label>
                                     </td>
                                     <td>
                                         <table class="inner_table">
@@ -253,7 +263,7 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td>
+                                    <td colspan="2" align="center">
                                         {% if can_edit %}
                                             <input type="submit" name="addbtn_ADDFOR_{{associative_prefix}}" value="Save Additions" />
                                         {% endif %}
@@ -263,16 +273,17 @@
                         {% endif %}
                         </table>
                     </form>
+                    <hr>
                     {% endif %}
                 {% endfor %} 
             </table>
         {% endif %}
             
         {% if multilinked_attr_list != None %}
-            <table class="basemultilinked_tbl">
+            <table class="basemultilinked_tbl" style="margin-bottom:10px">
                 {% for multilinked_attr_value_and_template_set in multilinked_attr_list %}
                     <form action="" method="POST" autocomplete="off">
-                        <table class="multilinked_attr_tbl">
+                        <table class="multilinked_attr_tbl" style="margin-bottom:10px">
                         {% set multilinked_attr_link_alpha_enum_values_set = multilinked_attr_value_and_template_set[0] %}
                         {% set associative_dynamic_additions_generation_info = multilinked_attr_value_and_template_set[1] %}
 
@@ -282,29 +293,24 @@
                             {% set associative_alphanumeric_vals_and_info = multilinked_attr_set[1] %}
                             {% set associative_enum_vals_and_info = multilinked_attr_set[2] %}
 
-                            {% set associative_link = url_for('redirect_entity', associative_class_name=associative_link_info[0], entity_id=associative_link_info[2]) %}
+
+                            {% set associative_link = "" %}
+                            {% if associative_link_info|length >= 2 %}
+                                {% set associative_link = url_for('redirect_entity', associative_class_name=associative_link_info[0], entity_id=associative_link_info[2]) %}
+                            {% endif %}
+
                             {% set associative_delete_btn_name = "deletebtn_" ~ associative_link_info[0] ~ "_DELETEFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %}
                             <!-- {% set associative_add_btn_name = "addbtn_" ~ associative_link_info[0] ~ "_ADDFOR_" ~ associative_link_info[1] ~ "=" ~ associative_link_info[2] %} -->
                             <!-- <p> LINK: {{associative_link_info}} </p> -->
                             <tr>
                                 <td>
-                                    <table class="multilinkedassociativedirectvals_tbl">
+                                    <table class="multilinkedassociativedirectvals_tbl" style="margin-bottom:10px">
                                         <!-- In theory, could set link to associative entity, if had ID of that entity, but again this is not currently supported -->
-                                        {% set included_link = "false" %}
-                                        {% set associative_link = "" %}
-                                        {% if associative_link_info|length >= 2 %}
-                                            {% set associative_link = url_for('redirect_entity', associative_class_name=associative_link_info[0], entity_id=associative_link_info[1]) %}
-                                        {% endif %}
-                                        <p> LINK: {{associative_link}}</p>
+                                        <!-- <p> LINK: {{associative_link}}</p> -->
                                         {% for alphanumeric_attr_with_datatype in associative_alphanumeric_vals_and_info %}
                                             <tr>
                                                 <td>
-                                                    {% if included_link == "false" %}
-                                                        <a href="{{associative_link}}">{{alphanumeric_attr_with_datatype[0]}} : </a>
-                                                        {% set included_link = "true" %}
-                                                    {% else %}
-                                                        {{alphanumeric_attr_with_datatype[0]}} : 
-                                                    {% endif %}
+                                                    {{alphanumeric_attr_with_datatype[0]|title}}: 
                                                 </td>
                                                 <td>
                                                     <input type="text" name={{alphanumeric_attr_with_datatype[0]}} pattern="{{alphanumeric_attr_with_datatype[1]}}" maxlength="{{alphanumeric_attr_with_datatype[2]}}" value="{{alphanumeric_attr_with_datatype[4]}}" {{alphanumeric_attr_with_datatype[3]}}/>
@@ -314,7 +320,7 @@
                                         {% for enum_attr in associative_enum_vals_and_info %}
                                             <tr>
                                                 <td>
-                                                    <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label>
+                                                    <label for={{enum_attr[0]}}>{{enum_attr[0]|title}}: </label>
                                                 </td>
                                                 <td>
                                                     <select id={{enum_attr[0]}} name={{enum_attr[0]}} {{enum_attr_2}}>
@@ -332,10 +338,15 @@
                                     </table>
                                 </td>
                                 <td>
+                                    <a href="{{associative_link}}" class="submit_mimic">EDIT</a>
+                                </td>
+                                <td>
                                     <!-- TODO: If are page owner -->
                                     <!-- <input type="submit" name="deletebtn_{{associative_link_info[0]}}_DELETEFOR_{{associative_link_info[1]}}" value="DELETE"> -->
                                     {% if can_edit %}
-                                        <input type="submit" name="{{associative_delete_btn_name}}" value="DELETE">
+                                    <div class="x_delete_btn">
+                                        <input type="submit" name="{{associative_delete_btn_name}}" value="x">
+                                    </div>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -345,7 +356,7 @@
                     <!-- TODO: if are page owner -->
                     {% if can_edit %}
                     <form action="" method="POST" autocomplete="off">
-                        <table class="multilinked_attr_template_tbl">
+                        <table class="multilinked_attr_template_tbl" style="margin-bottom:10px">
 
                         <!-- Generate template for parent and any children -->
                         {% set curr_multilinked_attr_metadata = associative_dynamic_additions_generation_info[2] %}
@@ -355,13 +366,13 @@
                         {% set multi_base_associative_prefix = "multibase_" ~ associative_dynamic_additions_generation_info[1] ~ "_insertassociativefor_" ~ curr_base_multilink_attr_metadata[1] %}
                         <tr>
                             <input type="text" id="{{multi_base_associative_prefix}}_field_type" name="{{multi_base_associative_prefix}}_field_type" value="multi" style="display:none">
-                            <input type="text" id="{{multi_base_associative_prefix}}_label" name="{{multi_base_associative_prefix}}_label" value="{{curr_base_multilink_attr_metadata[0]}}" style="display:none">
-                            <label for={{curr_base_multilink_attr_metadata[0]}}>Add {{ curr_base_multilink_attr_metadata[0][0]|upper}}{{curr_base_multilink_attr_metadata[0][1:] }}(s) : </label>
+                            <input type="text" id="{{multi_base_associative_prefix}}_label" name="{{multi_base_associative_prefix}}_label" value="{{curr_base_multilink_attr_metadata[0]|title}}" style="display:none">
+                            <label for={{curr_base_multilink_attr_metadata[0]}}>Add {{ curr_base_multilink_attr_metadata[0][0]|upper}}{{curr_base_multilink_attr_metadata[0][1:] }}(s): </label>
                             
                         </tr>
                         <tr>
                             <td>
-                                <table class="add_associatives_tbl">
+                                <table class="add_associatives_tbl" style="margin-bottom:10px">
                                     <tr>
                                         <td>
                                         </td>
@@ -388,7 +399,7 @@
                                 {% set child_associative_prefix = "multichild_" ~ associated_attr_list[1] ~ "_insertassociativefor_" ~ dropdown_metadata_and_fk_vals[1] %}
                                 <tr>
                                     <input type="text" id="{{child_associative_prefix}}_field_type" name="{{child_associative_prefix}}_field_type" value="select" style="display:none">
-                                    <input type="text" id="{{child_associative_prefix}}_label" name="{{child_associative_prefix}}_label" value="Add {{ dropdown_metadata_and_fk_vals[0][0]|upper}}{{dropdown_metadata_and_fk_vals[0][1:] }}(s) : " style="display:none">
+                                    <input type="text" id="{{child_associative_prefix}}_label" name="{{child_associative_prefix}}_label" value="Add {{ dropdown_metadata_and_fk_vals[0][0]|upper}}{{dropdown_metadata_and_fk_vals[0][1:] }}(s): " style="display:none">
                                     <input type="text" id="{{multi_base_associative_prefix}}_child" name="{{multi_base_associative_prefix}}_child" value="{{child_associative_prefix}}" style="display:none">
                                     <!-- Add label back? -->
                                     <select id="{{child_associative_prefix}}_options" name="{{child_associative_prefix}}_options" style="display:none">
@@ -412,6 +423,7 @@
                 </form>
             </div>
         {% endif %}
+    </div>
         {% if can_edit %}
             <div class="delete_btn">
                 <form action="{{url_for('delete_entity', entity=chosen_entity, delete_id=entity_id)}}">

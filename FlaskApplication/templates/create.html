@@ -50,39 +50,6 @@
                     <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Campaign</button>
                 </form>
             </div>
-            <!--
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='item')}}">
-                    <button>Item</button>
-                </form>
-            </div>
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='monster')}}">
-                    <button>Monster</button>
-                </form>
-            </div>
-            -->
-            <!-- <div class="grid-item">
-                <form action="#">
-                    <button>Battle Encounter</button>
-                </form>
-            </div> -->
-            <!--
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='race')}}">
-                    <button>Race</button>
-                </form>
-            </div>
-            <div class="grid-item">
-                <form action="{{url_for('create_details', entity='spell')}}">
-                    <button>Spell</button>
-                </form>
-            </div>
-            --><!--
-            <div class="grid-item">
-                < !-- Empty to try to force layout -- >
-            </div>
-        -->
             <div class="grid-item">
                 <form action="{{url_for('create_details', entity='monsterparty')}}">
                     <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Battle Encounter</button>
@@ -93,6 +60,29 @@
                     <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Item</button>
                 </form>
             </div>
+            <div class="grid-item">
+                <form action="{{url_for('create_details', entity='monster')}}">
+                    <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Monster</button>
+                </form>
+            </div>
+            <!-- <div class="grid-item">
+                <form action="#">
+                    <button>Battle Encounter</button>
+                </form>
+            </div> -->
+            <!-- <div class="grid-item">
+                <form action="{{url_for('create_details', entity='race')}}">
+                    <button>Race</button>
+                </form>
+            </div> -->
+            <div class="grid-item">
+                <form action="{{url_for('create_details', entity='spell')}}">
+                    <button {{disabled_btn_text}} title="{{disabled_btn_title}}">Spell</button>
+                </form>
+            </div>
+            <!-- <div class="grid-item">
+                < !-- Empty to try to force layout -- >
+            </div> -->
         </div>
     </body>
 </html>

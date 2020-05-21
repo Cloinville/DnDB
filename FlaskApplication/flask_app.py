@@ -22,7 +22,7 @@ logged_in_user_details = {'username': None, 'nickname': None, 'player_id': None,
 default_dropdown_str = ""
 searchable_entities = ['Monster', 'Class', 'Race', 'Spell', 'Item', 'Skill', 'Ability', 'Weapon', 'School of Magic']
 # creatable_entities = ['character', 'campaign', 'monster', 'item', 'weapon', 'spell', 'monsterparty']
-creatable_entities = ['character', 'campaign', 'monsterparty']
+creatable_entities = ['character', 'campaign', 'monsterparty', 'item', 'monster', 'spell']
 associative_entity_redirects = { 'characterabilityscore' : 'ability', 'characterinventoryitem' : "item", 'characterlearnedlanguage' : 'language', 'character_partymember' : 'campaign',
                                  'classlearnablespell' : 'spell', 'learnedspell' : 'spell', 'levelallocation' : 'class', 'monsterabilityscore' : 'ability',
                                  'monsterencounter' : 'monsterencounter', 'monsterlootitem' : 'item', 'partymember' : 'character', 
@@ -293,8 +293,12 @@ def create_details(entity):
 
     alphanumeric_attr_list, enum_attr_list = get_alphanumeric_and_enum_attr_lists(chosen_entity, False)
 
+    # remove "ID" from create list
+    alphanumeric_attr_list.pop(0)
+
     include_creator_id = False
-    fk_set_list = get_fk_set_list(chosen_entity, include_creator_id)
+    # fk_set_list = get_fk_set_list(chosen_entity, include_creator_id)
+    fk_set_list = get_fk_set_list(chosen_entity, include_creator_id, None, False)
 
     direct_attr_list, multilinked_attr_list = get_dynamic_associative_attr_lists_for_create(chosen_entity, True)
 
@@ -444,10 +448,15 @@ def entity_details(entity, entity_id):
                 delete_cmd = "UPDATE `{0}` SET char_id = NULL WHERE char_id = '{1}'".format(delete_table, entity_id)
                 print("DELETE CMD: {0}".format(delete_cmd))
             else:
+                full_delete_condition = ""
                 second_pk_name = execute_cmd_and_get_result("SELECT get_other_id_colname_from_associative('{0}', '{1}')".format(delete_table, first_pk_name))[0][0]
-                second_delete_condition = "{0}='{1}'".format(second_pk_name, entity_id)
+                
+                if second_pk_name != None:
+                    second_delete_condition = "{0}='{1}'".format(second_pk_name, entity_id)
 
-                full_delete_condition = "WHERE {0} AND {1}".format(first_delete_condition, second_delete_condition)
+                    full_delete_condition = "WHERE {0} AND {1}".format(first_delete_condition, second_delete_condition)
+                else:
+                    full_delete_condition = "WHERE {0}".format(first_delete_condition)
                 delete_multiple_records = 0
 
                 delete_cmd = "CALL delete_record_in_table('{0}', '{1}', '{2}')".format(delete_table, full_delete_condition, delete_multiple_records)
@@ -609,7 +618,14 @@ def delete_entity(entity,delete_id):
             print("Could not delete entity")
     
     else:
-        print("Invalid Entity provided")
+        try:
+            pk_name = execute_cmd_and_get_result("SELECT get_primary_key_name_from_table_name('{0}')".format(entity))
+            delete_condition = "WHERE {0} = '{1}'".format(pk_name, delete_id)
+            delete_cmd = "CALL delete_record_in_table('{0}', '{1}', '{2}')".format(entity, delete_condition, "0")
+            execute_cmd(delete_cmd)
+
+        except Exception as e:
+            print("Invalid Entity provided: {0}".format(e))
     
     return redirect('/index')
 
@@ -690,17 +706,23 @@ def get_alphanumeric_and_enum_attr_lists(chosen_entity, include_dropdown_default
         attr_name = attr_set[0]
         attr_datatype = attr_set[1]
 
+        attr_html_label = get_formatted_attribute_label(attr_name)
+
         # If an enum, convert all of the allowed values into a list, and associate list w/attr name
         if "enum" in attr_datatype:
             enum_vals = [enum_val[1:-1] if enum_val[0] == "'" and enum_val[len(enum_val) - 1] == "'" else enum_val for enum_val in attr_datatype.split("enum")[1][1:-1].split(",")]
             if include_dropdown_defaults:
                 enum_vals.insert(0, default_dropdown_str)
-            enum_attr_list.append([attr_name, enum_vals])
+            enum_attr_list.append([attr_name, enum_vals, attr_html_label])
         else:
             if "text" not in attr_datatype or include_text_attrs:
                 attr_datatype_html_pattern, attr_datatype_html_length = convert_mysql_datatype_to_html_datatype(attr_datatype)
-                alphanumeric_attr_list.append([attr_name, attr_datatype_html_pattern, attr_datatype_html_length])
+                alphanumeric_attr_list.append([attr_name, attr_datatype_html_pattern, attr_datatype_html_length, attr_html_label])
 
+    # DEBUGGING
+    print("ALPHA: {0}".format(alphanumeric_attr_list))
+    print("ENUM: {0}".format(enum_attr_list))
+    # END DEBUGGING
     return alphanumeric_attr_list, enum_attr_list
 
 
@@ -778,6 +800,10 @@ def get_alphanumeric_and_enum_attr_lists_with_values_for_details(chosen_entity, 
                     link_entity = "monsterencounter"
 
                 link_info = [link_entity, associative_id_name, curr_record_values[i]]
+
+                # DEBUGGING
+                print("LINK COMPONENTS: {0}".format(link_info))
+                # END DEBUGGING
 
         for i in range(link_info_index + 1, min_end_index):
         # for attr_set in attr_datatype_list:
@@ -1099,7 +1125,7 @@ def upgrade_player_to_dm():
     if logged_in_user_details['dm_id'] == None:
         try:
             execute_cmd("INSERT INTO dungeonmaster(player_id) VALUES({0})".format(logged_in_user_details['player_id']))
-            logged_in_user_details['dm_id'] = execute_cmd_and_get_result("SELECT dm_id FROM dungeonmaster JOIN player USING(player_id) WHERE player_username = '{0}'".format(logged_in_user_details['username']))
+            logged_in_user_details['dm_id'] = execute_cmd_and_get_result("SELECT dm_id FROM dungeonmaster JOIN player USING(player_id) WHERE player_username = '{0}'".format(logged_in_user_details['username']))[0][0]
         except Exception as e:
             print(e)
 
@@ -1333,7 +1359,7 @@ def get_create_lists_from_request_form(request_form):
                 parent_name = key[:-len("_child")]
                 multi_level_associations_parents_to_children[parent_name] = value
 
-            elif not key.endswith("_options") and not key.endswith("_label") and not key.endswith("_field_type"):
+            elif not key.endswith("_options") and not key.endswith("_label") and not key.endswith("_field_type") and not key.startswith("addbtn_"):
                 if key.startswith("dynamic") or key.startswith("static"):
                     single_level_associations.append([key, value])
                 else:
@@ -1571,6 +1597,7 @@ def convert_mysql_datatype_to_html_datatype(datatype):
 
     alphanumeric = "[a-zA-Z0-9_ ]+" 
     numeric = "[0-9]+"
+    decimal_numeric = "[0-9]*.[0-9][0-9]"
 
     datatype = datatype.lower()
 
@@ -1589,6 +1616,12 @@ def convert_mysql_datatype_to_html_datatype(datatype):
     elif "int" in datatype:
         datatype_text_type = numeric
         datatype_length = datatype.split("(")[1][:-1]
+
+    elif "float" in datatype or "decimal" in datatype:
+        datatype_text_type = decimal_numeric
+        datatype_length = 9
+        if "(" in datatype and ")" in datatype:
+            datatype_length = datatype.split("(")[1][:-1]
 
     return datatype_text_type, datatype_length
 
@@ -1667,7 +1700,9 @@ def get_formatted_attribute_label(unformatted_label):
     if unformatted_label == "id":
         return "ID"
     else:
-        formatted_label_components = ["{0}{1}".format(component[0].upper(), component[1:]) if len(component) > 1 else component.upper() for component in unformatted_label.split("_")]
+        pre_formatted_label_components = ["{0}{1}".format(component[0].upper(), component[1:]) if len(component) > 1 else component.upper() for component in unformatted_label.split("_")]
+        formatted_label_components = [component.upper() if len(component) == 2 and component != "Is" else component for component in pre_formatted_label_components]
+
         return " ".join(formatted_label_components)
 
 

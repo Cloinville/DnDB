@@ -32,9 +32,10 @@
             </div>
         </header>
         <h1 class="page_title">My Campaigns</h1>
+        <div class="center_content">
         <div class="campaign_previews">
             {% if campaign_previews == None %}
-            <p>No campaigns found</p>
+            <p>No campaigns found :'(</p>
             {% else %}
                             {% for preview in campaign_previews %}
                                 <form action="{{url_for('entity_details', entity=preview[0], entity_id=preview[2][1])}}">
@@ -50,5 +51,6 @@
                                 {% endfor %}
                 </div>
             {% endif %}
+        </div>
     </body>
 </html>

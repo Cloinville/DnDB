@@ -32,16 +32,18 @@
                 </div>
         </header>
         <h1 class="page_title">Upgrade to DnDB Premium</h1>
-        {% if logged_in_user_details['dm_id'] != None %}
-        <p>Thank you for using our Premium service! We appreciate you!</p>
-        {% else %}
-        <p>By upgrading to DnDB Premium, you'll unlock a selection of exclusive benefits, including unlimited creation capabilities, access to in-depth Campaign views and management tools, and much more!</p>
-        <p>Switching is easy! Just click the button below to get your 100 year free trial!</p>
-        <p>
-            <form method="POST" action="" autocomplete="off">
-                <input type="submit" name="submit_btn" value="Upgrade to Premium">
-            </form>
-        </p>
-        {% endif %}
+        <div class="center_content">
+            {% if logged_in_user_details['dm_id'] != None %}
+                <p>Thank you for using our Premium service! We appreciate you!</p>
+            {% else %}
+                <p>By upgrading to DnDB Premium, you'll unlock a selection of exclusive benefits, including unlimited creation capabilities, access to in-depth Campaign views and management tools, and much more!</p>
+                <p style="text-align:center; margin-bottom:50px">Switching is easy! Just click the button below to get your 100 year free trial!</p>
+                <p>
+                    <form method="POST" action="" autocomplete="off">
+                        <input type="submit" name="submit_btn" value="Upgrade to Premium">
+                    </form>
+                </p>
+            {% endif %}
+        </div>
     </body>
 </html>

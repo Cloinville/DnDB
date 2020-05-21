@@ -32,6 +32,7 @@
             </div>
         </header>
         <h1 class="page_title">My Profile</h1>
+        <div class="center_content">
         <!--{% if error %}-->
                 <div class="hidden"> <p class="error" style="color:#df2020; font-size:12px;margin-bottom:10px;"><strong>Error: </strong> {{error}}</p></div>
         <!--{% endif %}-->
@@ -53,15 +54,18 @@
                         <input type="text" id="nickname" name="nickname" placeholder="{{logged_in_user_details['nickname']}}">
                     </td>
                 </tr>
+                </table>
+                <table style="margin-top: 20px">
                 <tr>
-                    <td>
+                    <td style="padding-right:5px">
                         <input type="submit" name="submit_btn" value="Update">
                     </td>
-                    <td>
+                    <td style="padding-left:5px">
                         <input type="submit" name="submit_btn" value="Revert">
                     </td>
                 </tr>
             </table>
         </form>
+    </div>
     </body>
 </html>
