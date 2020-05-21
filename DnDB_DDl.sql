@@ -1,14 +1,36 @@
-USE csuciklo_dndb;
+#USE csuciklo_dndb;
+use csuciklo_COMP420_DnDB;
 
 -- # Saved list of all table drops for cleaning while finalizing structure
 -- # TODO: 1. Remove this once no longer needed, BEFORE final submission!
--- #	   2. Add "password" field to player in CREATE TABLE statement
 --
+-- DROP VIEW character_details;
+-- DROP VIEW characterabilityscore_details;
+-- DROP VIEW characterinventoryitem_details;
+-- DROP VIEW characterlearnedlanguage_details;
+-- DROP VIEW classlearnablespell_details;
+-- DROP VIEW classlevelnewspellscount_details;
+-- DROP VIEW learnedspell_details;
+-- DROP VIEW levelallocation_details;
+-- DROP VIEW monster_details;
+-- DROP VIEW monsterabilityscore_details;
+-- DROP VIEW monsterencounter_details;
+-- DROP VIEW monsterencounter_monsterencounter_details;
+-- DROP VIEW monsterparty_monsterencounter_details;
+-- DROP VIEW monsterlootitem_details;
+-- DROP VIEW monsterparty_details;
+-- DROP VIEW private_campaign_partymember_details;
+-- DROP VIEW public_campaign_partymember_details;
+-- DROP VIEW raceabilityscoremodifier_details;
+-- DROP VIEW raceknownlanguage_details;
+-- DROP VIEW skill_details;
+-- DROP VIEW spell_details;
+-- DROP VIEW weapon_details;
+
 -- DROP TABLE levelallocation;
 -- DROP TABLE classlearnablespell;
 -- DROP TABLE raceabilityscoremodifier;
 -- DROP TABLE learnedspell;
--- DROP TABLE class;
 -- DROP TABLE classlevelnewspellscount;
 -- DROP TABLE raceknownlanguage;
 -- DROP TABLE characterlearnedlanguage;
@@ -23,13 +45,14 @@ USE csuciklo_dndb;
 -- DROP TABLE `language`;
 -- DROP TABLE weapon;
 -- DROP TABLE item;
--- DROP TABLE `character`;
 -- DROP TABLE monster;
--- DROP TABLE race;
 -- DROP TABLE skill;
 -- DROP TABLE ability;
+-- DROP TABLE class;
+-- DROP TABLE partymember;
 -- DROP TABLE campaign;
--- DROP TABLE adventuringparty;
+-- DROP TABLE `character`;
+-- DROP TABLE race;
 -- DROP TABLE dungeonmaster;
 -- DROP TABLE player;
 
@@ -37,7 +60,6 @@ USE csuciklo_dndb;
 CREATE TABLE player(
 	player_id INT(10) PRIMARY KEY AUTO_INCREMENT,
     player_username VARCHAR(32) UNIQUE NOT NULL,
---     player_nickname VARCHAR(128) NOT NULL,
 	player_nickname VARCHAR(16) NOT NULL,
     player_password VARCHAR(32) NOT NULL
 )ENGINE=InnoDB;
@@ -79,11 +101,11 @@ CREATE TABLE monster(
     monster_description TEXT DEFAULT NULL,
     monster_base_hp SMALLINT DEFAULT 0,
     monster_type ENUM(
-						"abberation", "beast", "celestial", "construct", "dragon",
-                        "elemental", "fey", "fiend",
-                        "fiend (shapechanger)", "giant", "humanoid", "monstrosity",
-                        "ooze", "plant", "swarm of tiny beasts", "undead", "other"
-					 ) NOT NULL DEFAULT "other",
+						"Abberation", "Beast", "Celestial", "Construct", "Dragon",
+                        "Elemental", "Fey", "Fiend",
+                        "Fiend (Shapechanger)", "Giant", "Humanoid", "Monstrosity",
+                        "Ooze", "Plant", "Swarm of Tiny Beasts", "Undead", "Other"
+					 ) NOT NULL DEFAULT "Other",
     dm_id INT(10)
 )ENGINE=InnoDB;
 
@@ -106,10 +128,10 @@ CREATE TABLE `character`(
     char_height VARCHAR(10) DEFAULT NULL,
     char_notes TEXT DEFAULT NULL,
     char_public_class ENUM(
-								"barbarian", "bard", "cleric", "druid", "fighter",
-								"monk", "paladin", "ranger", "rogue", "sorcerer",
-                                "warlock", "wizard", "multiclass", "classless"
-						   ) NOT NULL DEFAULT "classless",
+								"Barbarian", "Bard", "Cleric", "Druid", "Fighter",
+								"Monk", "Paladin", "Ranger", "Rogue", "Sorcerer",
+                                "Warlock", "Wizard", "Multiclass", "Classless"
+						   ) NOT NULL DEFAULT "Classless",
     char_base_hp SMALLINT NOT NULL DEFAULT 0,
     char_remaining_hp SMALLINT NOT NULL DEFAULT 0,
     char_platinum INT NOT NULL DEFAULT 0,
@@ -117,7 +139,6 @@ CREATE TABLE `character`(
     char_silver INT NOT NULL DEFAULT 0,
     char_copper INT NOT NULL DEFAULT 0,
     race_id SMALLINT NOT NULL,
-    # party_id INT(10) DEFAULT NULL,
     player_id INT(10) NOT NULL,
 	char_overall_level TINYINT NOT NULL DEFAULT 0
 )ENGINE=InnoDB;
@@ -127,13 +148,13 @@ CREATE TABLE item(
     item_name VARCHAR(128) DEFAULT NULL,
     item_description TEXT DEFAULT NULL,
     item_rarity ENUM(
-						"common", "uncommon", "rare", "very rare", "legendary"
+						"Common", "Uncommon", "Rare", "Very Rare", "Legendary"
 					) NOT NULL DEFAULT "common",
     item_type ENUM(
-					"armor", "weapon", "potion", "ring", "rod", "scroll", "staff",
-					"wand", "wondrous item", "equipment", "shiled", "ammunition",
-                    "ordinary"
-				  ) NOT NULL DEFAULT "ordinary",
+					"Armor", "Weapon", "Potion", "Ring", "Rod", "Scroll", "Staff",
+					"Wand", "Wondrous Item", "Equipment", "Tool", "Mount or Vehicle", "Shield",
+                    "Ordinary"
+				  ) NOT NULL DEFAULT "Ordinary",
     item_price VARCHAR(128) DEFAULT NULL,
     item_requires_attunement BOOLEAN DEFAULT FALSE,
     dm_id INT(10) DEFAULT NULL
@@ -290,12 +311,10 @@ CREATE TABLE partymember(
 # Add foreign key constraints
 ALTER TABLE dungeonmaster ADD CONSTRAINT `dm_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
 ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
-# ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
 ALTER TABLE skill ADD CONSTRAINT `skill_fk_ability_id` FOREIGN KEY(ability_id) REFERENCES ability(ability_id);
 ALTER TABLE monster ADD CONSTRAINT `monster_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE race ADD CONSTRAINT `race_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_race_id` FOREIGN KEY(race_id) REFERENCES race(race_id);
-# ALTER TABLE `character` ADD CONSTRAINT `character_fk_party_id` FOREIGN KEY(party_id) REFERENCES adventuringparty(party_id);
 ALTER TABLE `character` ADD CONSTRAINT `character_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
 ALTER TABLE item ADD CONSTRAINT `item_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE weapon ADD CONSTRAINT `weapon_fk_item_id` FOREIGN KEY(item_id) REFERENCES item(item_id);
