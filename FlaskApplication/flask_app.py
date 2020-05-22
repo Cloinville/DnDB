@@ -7,9 +7,11 @@ from jinja2.ext import Extension
 
 app = Flask(__name__)
 
-# configure db
-connection_values = yaml.load(open('db.yaml'))
-# add file path (make sure this file is there on repo is eric test locally)
+# Values for DB connection
+connection_values = {'mysql_host': 'csuci-kloomis.cikeys.com',
+                     'mysql_user': 'csuciklo_ekaltman',
+                     'mysql_password': 'comp420spring2020',
+                     'mysql_db': 'csuciklo_COMP420_DnDB'}
 
 # Jinja_env changes
 env = app.jinja_env

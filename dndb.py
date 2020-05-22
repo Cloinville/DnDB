@@ -5,8 +5,8 @@ import sys
 
 mydb = mysql.connector.connect(
     host='csuci-kloomis.cikeys.com',
-    user='csuciklo_dndb_root',
-    passwd='WeareabsolutelygonnagetanA+',
+    user='csuciklo_ekaltman',
+    passwd='comp420spring2020',
     database='csuciklo_COMP420_DnDB')
 cursor = mydb.cursor()
 
