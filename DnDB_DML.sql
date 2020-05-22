@@ -112,11 +112,12 @@ AS
            character_details.Notes,
            character_details.`Base HP`,
            (character_details.Platinum * 10) + character_details.Gold + (character_details.Silver / .1) + (character_details.Copper / .01) as "Money",
-           group_concat(`Item` ORDER BY `Item` SEPARATOR', ') as "Inventory"
+           group_concat(item_name ORDER BY item_name SEPARATOR', ') as "Inventory"
 	FROM campaign JOIN partymember USING(campaign_id)
                   LEFT JOIN player USING(player_id)
                   LEFT JOIN character_details ON partymember.char_id = character_details.ID
-				  LEFT JOIN characterinventoryitem_details ON character_details.ID = characterinventoryitem_details.ID
+				  LEFT JOIN characterinventoryitem ON characterinventoryitem.char_id = character_details.ID
+                  LEFT JOIN item USING(item_id)
 	GROUP BY character_details.ID
 	HAVING  character_details.ID IS NOT NULL
 	UNION
@@ -139,8 +140,8 @@ AS
 	FROM campaign JOIN partymember USING(campaign_id)
                   LEFT JOIN player USING(player_id)
                   LEFT JOIN character_details ON partymember.char_id = character_details.ID
-                  LEFT JOIN characterinventoryitem_details ON characterinventoryitem_details.ID = character_details.ID
-	WHERE characterinventoryitem_details.item_id IS NULL;
+                  LEFT JOIN characterinventoryitem ON characterinventoryitem.char_id = character_details.ID
+	WHERE characterinventoryitem.item_id IS NULL;
     
 
 -- ------------------------------------------- 12 Required Functions & Procedures ------------------------------------------- --
