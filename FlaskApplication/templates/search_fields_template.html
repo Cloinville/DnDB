@@ -13,7 +13,6 @@
                     {% set print_name_pieces = alphanumeric_attr_with_datatype[0].split("_", 1)[1].split("_") %}
                 <tr>
                     <td>
-                        <!-- {{print_name}} :  -->
                         {% for word in print_name_pieces %}
                             {% if word|length == 2 %}
                                 {{word|upper}}
@@ -31,7 +30,6 @@
                     {% set print_name_pieces = enum_attr[0].split("_", 1)[1].split("_") %}
                 <tr>
                     <td>
-                        <!-- <label for={{enum_attr[0]}}>{{enum_attr[0]}} : </label> -->
                         <label for={{enum_attr[0]}}>
                             {% for word in print_name_pieces %}
                                 {% if word|length == 2 %}
@@ -64,7 +62,6 @@
                     {% endif %}
                 <tr>
                     <td>
-                        <!-- <label for={{fk_set[0]}}>{{fk_set[0]}} : </label> -->
                         <label for={{fk_set[0]}}>
                             {% if modify_name == "true" %}
                                 {% for word in print_name_pieces %}

@@ -40,7 +40,7 @@
                         <label for="entity">Choose an entity: </label>
                     </td>
                     <td>
-                        <select id="entities" name="chosen_entity">
+                        <select id="entities" name="chosen_entity" style="min-width:250px">
                             {% for entity in entities %}
                                 {% if entity == chosen_entity %}
                                     <option name="entity" value="{{entity}}" selected>{{entity}}</option>

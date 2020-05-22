@@ -32,6 +32,7 @@
             </div>
         </header>
         <h1 class="page_title">Level Up!</h1>
+        <div class="center_content">
         <form action="" method="POST">
             <label for="entity">Choose a class: </label>
             <select id="classes" name="chosen_class">
@@ -45,6 +46,7 @@
             </select>
             <input type=submit value="Select Class">
         </form>
+        
         {% if level_up_details_link != None %}
         <iframe src="{{url_for('level_up_details', chosen_class=chosen_class, char_id=char_id)}}"
                 name="search_template"
@@ -52,5 +54,6 @@
                 width="100%">
         </iframe>
         {% endif %}
+    </div>
     </body>
 </html>

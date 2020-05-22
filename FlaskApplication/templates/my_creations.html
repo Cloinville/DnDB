@@ -35,7 +35,7 @@
         <div class="campaign_previews">
             <form action="" method="POST">
                 <label for="Filter">Filter by Entity Type: </label>
-                <select id="filter_entity" name="filter_entity">
+                <select id="filter_entity" name="filter_entity" style="min-width:250px">
                     {% for entity in filterable_entities %}
                         {% if entity == filter_entity %}
                             <option name="filter_entity" value="{{entity}}" selected>{{entity}}</option>
@@ -47,23 +47,23 @@
                 <input type=submit value="Filter Results">
             </form>
             {% if previews == None %}
-            <p>No creations found</p>
+                <p>No creations found :'( </p>
             {% else %}
-                            {% for preview in previews %}
-                                {% for record in preview %}
-                                <form action="{{url_for('entity_details', entity=record[0], entity_id=record[2][1])}}">
-                                    <div class="preview-item">
-                                        <button name="{{record[0]}}_btn" value="{{record[2][0]}}={{record[2][1]}}">
-                                            <h1>{{record[0]}}</h1>
-                                            {% for col_and_val in record[3] %}
-                                                <p>{{col_and_val[0]}} : {{col_and_val[1]}}</p>
-                                            {% endfor %}
-                                        </button>
-                                    </div>
-                                </form>
-                                {% endfor %}
-                            {% endfor %}
-                </div>
+                {% for preview in previews %}
+                    {% for record in preview %}
+                        <form action="{{url_for('entity_details', entity=record[0], entity_id=record[2][1])}}">
+                            <div class="preview-item">
+                                <button name="{{record[0]}}_btn" value="{{record[2][0]}}={{record[2][1]}}">
+                                    <h1>{{record[0]}}</h1>
+                                    {% for col_and_val in record[3] %}
+                                        <p>{{col_and_val[0]}} : {{col_and_val[1]}}</p>
+                                    {% endfor %}
+                                </button>
+                            </div>
+                        </form>
+                    {% endfor %}
+                {% endfor %}
             {% endif %}
+        </div>
     </body>
 </html>

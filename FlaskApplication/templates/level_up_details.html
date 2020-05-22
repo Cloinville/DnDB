@@ -3,6 +3,7 @@
         <link href="../../static/styles/style.css" rel="stylesheet" type="text/css">
     </head>
     <body>
+        <div class="center_content_iframe">
         <form class="levelup_form" action="{{ url_for('confirmed_level_up', char_id=char_id, class_id=class_id) }}" target="_PARENT"  method="POST" autocomplete="off">
             <table>
                 <tr>
@@ -45,25 +46,27 @@
                 </tr>
             </table>
         </form>
-        <script>
-            var frm = document.querySelector('form.levelup_form');
-            var inputs = frm.querySelectorAll('select');
+    </div>
+    <!-- Script to prevent submission and set select to red if spell selection repeated -->
+    <script>
+        var frm = document.querySelector('form.levelup_form');
+        var inputs = frm.querySelectorAll('select');
 
-            frm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                var select_choices = [];
+        frm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var select_choices = [];
 
-                for(var i = 0; i < inputs.length; i++) {
-                    if(select_choices.indexOf(inputs[i].value) != -1) {
-                        inputs[i].style.backgroundColor = "red";
-                        return false;
-                    }else{
-                        inputs[i].style.backgroundColor = "white";
-                        select_choices.push(inputs[i].value);
-                    }
+            for(var i = 0; i < inputs.length; i++) {
+                if(select_choices.indexOf(inputs[i].value) != -1) {
+                    inputs[i].style.backgroundColor = "red";
+                    return false;
+                }else{
+                    inputs[i].style.backgroundColor = "white";
+                    select_choices.push(inputs[i].value);
                 }
-                frm.submit();
-            });
+            }
+            frm.submit();
+        });
         </script>
     </body>
 </html>

@@ -9,9 +9,9 @@
                     <img class="avatar" src="../static/styles/login_avatar.png"/>
                     <h1>Login</h1>
                     <form method="POST" action="" autocomplete="off">
-                        <!--{% if error %}-->
+                        {% if error %}
                             <div class="hidden"> <p class="error" style="color:#df2020; font-size:12px;margin-bottom:10px;"><strong>Error: </strong> {{error}}</p></div>
-                        <!--{% endif %}-->
+                        {% endif %}
                         <p>Username</p>
                         <input type="text" name="username" placeholder="Enter username"/>
                         <p>Password</p>

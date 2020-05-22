@@ -34,7 +34,7 @@
         <h1 class="page_title">Search Result</h1>
         <div class="campaign_previews">
             {% if records_and_metadata == None %}
-            <p>No results found</p>
+            <p>No results found :'( </p>
             {% else %}
                     {% for record_and_metadata in records_and_metadata %}
                         <form action="{{url_for('entity_details', entity=record_and_metadata[0], entity_id=record_and_metadata[2][1])}}">
@@ -51,22 +51,5 @@
                 </div>
             {% endif %}
         </div>
-        <!-- <table>
-        {% if records_and_metadata == None %}
-        <p>No results found</p>
-        {% else %}
-            {% for record_and_metadata in records_and_metadata %}
-            
-                <p> SHOULD BE 'identifier, ___id': {{record_and_metadata[0]}}</p>
-                <p> SHOULD BE 'entity, ___": {{record_and_metadata[1]}}</p>
-                {% for col_and_val in record_and_metadata[2] %}
-                    <tr>
-                        <td>{{col_and_val[0]}}</td>
-                        <td>{{col_and_val[1]}}</td>
-                    </tr>
-                {% endfor %}
-            {% endfor %}
-        {% endif %}
-        </table> -->
     </body>
 </html>
