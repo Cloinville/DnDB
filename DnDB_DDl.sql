@@ -1,61 +1,6 @@
 #USE csuciklo_dndb;
 use csuciklo_COMP420_DnDB;
 
--- # Saved list of all table drops for cleaning while finalizing structure
--- # TODO: 1. Remove this once no longer needed, BEFORE final submission!
---
--- DROP VIEW character_details;
--- DROP VIEW characterabilityscore_details;
--- DROP VIEW characterinventoryitem_details;
--- DROP VIEW characterlearnedlanguage_details;
--- DROP VIEW classlearnablespell_details;
--- DROP VIEW classlevelnewspellscount_details;
--- DROP VIEW learnedspell_details;
--- DROP VIEW levelallocation_details;
--- DROP VIEW monster_details;
--- DROP VIEW monsterabilityscore_details;
--- DROP VIEW monsterencounter_details;
--- DROP VIEW monsterencounter_monsterencounter_details;
--- DROP VIEW monsterparty_monsterencounter_details;
--- DROP VIEW monsterlootitem_details;
--- DROP VIEW monsterparty_details;
--- DROP VIEW private_campaign_partymember_details;
--- DROP VIEW public_campaign_partymember_details;
--- DROP VIEW raceabilityscoremodifier_details;
--- DROP VIEW raceknownlanguage_details;
--- DROP VIEW skill_details;
--- DROP VIEW spell_details;
--- DROP VIEW weapon_details;
-
--- DROP TABLE levelallocation;
--- DROP TABLE classlearnablespell;
--- DROP TABLE raceabilityscoremodifier;
--- DROP TABLE learnedspell;
--- DROP TABLE classlevelnewspellscount;
--- DROP TABLE raceknownlanguage;
--- DROP TABLE characterlearnedlanguage;
--- DROP TABLE characterinventoryitem;
--- DROP TABLE monsterlootitem;
--- DROP TABLE monsterencounter;
--- DROP TABLE monsterparty;
--- DROP TABLE characterabilityscore;
--- DROP TABLE monsterabilityscore;
--- DROP TABLE spell;
--- DROP TABLE schoolofmagic;
--- DROP TABLE `language`;
--- DROP TABLE weapon;
--- DROP TABLE item;
--- DROP TABLE monster;
--- DROP TABLE skill;
--- DROP TABLE ability;
--- DROP TABLE class;
--- DROP TABLE partymember;
--- DROP TABLE campaign;
--- DROP TABLE `character`;
--- DROP TABLE race;
--- DROP TABLE dungeonmaster;
--- DROP TABLE player;
-
 # Table creation
 CREATE TABLE player(
 	player_id INT(10) PRIMARY KEY AUTO_INCREMENT,
@@ -308,7 +253,8 @@ CREATE TABLE partymember(
     PRIMARY KEY(campaign_id, player_id)
 )ENGINE=InnoDB;
 
-# Add foreign key constraints
+# Add foreign key constraints 
+# (set here separately to allow possibility for data import before key constraints set, and to allow flexibility in table creation order)
 ALTER TABLE dungeonmaster ADD CONSTRAINT `dm_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
 ALTER TABLE campaign ADD CONSTRAINT `campaign_fk_dm_id` FOREIGN KEY(dm_id) REFERENCES dungeonmaster(dm_id);
 ALTER TABLE skill ADD CONSTRAINT `skill_fk_ability_id` FOREIGN KEY(ability_id) REFERENCES ability(ability_id);
@@ -348,3 +294,57 @@ ALTER TABLE classlearnablespell ADD CONSTRAINT `cls_fk_spell_id` FOREIGN KEY(spe
 ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_campaign_id` FOREIGN KEY(campaign_id) REFERENCES campaign(campaign_id);
 ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_player_id` FOREIGN KEY(player_id) REFERENCES player(player_id);
 ALTER TABLE partymember ADD CONSTRAINT `partymember_fk_char_id` FOREIGN KEY(char_id) REFERENCES `character`(char_id);
+
+
+-- # Saved list of order view and table drops to ease the process of rebuilding the schema in an existing version of the database
+-- DROP VIEW character_details;
+-- DROP VIEW characterabilityscore_details;
+-- DROP VIEW characterinventoryitem_details;
+-- DROP VIEW characterlearnedlanguage_details;
+-- DROP VIEW classlearnablespell_details;
+-- DROP VIEW classlevelnewspellscount_details;
+-- DROP VIEW learnedspell_details;
+-- DROP VIEW levelallocation_details;
+-- DROP VIEW monster_details;
+-- DROP VIEW monsterabilityscore_details;
+-- DROP VIEW monsterencounter_details;
+-- DROP VIEW monsterencounter_monsterencounter_details;
+-- DROP VIEW monsterparty_monsterencounter_details;
+-- DROP VIEW monsterlootitem_details;
+-- DROP VIEW monsterparty_details;
+-- DROP VIEW private_campaign_partymember_details;
+-- DROP VIEW public_campaign_partymember_details;
+-- DROP VIEW raceabilityscoremodifier_details;
+-- DROP VIEW raceknownlanguage_details;
+-- DROP VIEW skill_details;
+-- DROP VIEW spell_details;
+-- DROP VIEW weapon_details;
+
+-- DROP TABLE levelallocation;
+-- DROP TABLE classlearnablespell;
+-- DROP TABLE raceabilityscoremodifier;
+-- DROP TABLE learnedspell;
+-- DROP TABLE classlevelnewspellscount;
+-- DROP TABLE raceknownlanguage;
+-- DROP TABLE characterlearnedlanguage;
+-- DROP TABLE characterinventoryitem;
+-- DROP TABLE monsterlootitem;
+-- DROP TABLE monsterencounter;
+-- DROP TABLE monsterparty;
+-- DROP TABLE characterabilityscore;
+-- DROP TABLE monsterabilityscore;
+-- DROP TABLE spell;
+-- DROP TABLE schoolofmagic;
+-- DROP TABLE `language`;
+-- DROP TABLE weapon;
+-- DROP TABLE item;
+-- DROP TABLE monster;
+-- DROP TABLE skill;
+-- DROP TABLE ability;
+-- DROP TABLE class;
+-- DROP TABLE partymember;
+-- DROP TABLE campaign;
+-- DROP TABLE `character`;
+-- DROP TABLE race;
+-- DROP TABLE dungeonmaster;
+-- DROP TABLE player;
