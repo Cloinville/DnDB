@@ -1,4 +1,3 @@
-#USE csuciklo_dndb;
 use csuciklo_COMP420_DnDB;
 
 # Table creation

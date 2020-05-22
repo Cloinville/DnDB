@@ -1,4 +1,3 @@
-# use csuciklo_dndb;
 USE csuciklo_COMP420_DnDB;
 
 # File Contents:
@@ -1231,7 +1230,6 @@ BEGIN
     
 	SELECT column_name, column_type
 	FROM INFORMATION_SCHEMA.columns
--- 	WHERE table_schema="csuciklo_dndb"
 	WHERE table_schema="csuciklo_COMP420_DnDB"
 		  AND table_name = modified_table_name;
 END $$
@@ -1345,7 +1343,6 @@ BEGIN
 	SELECT column_name 
     INTO primary_key_name
     FROM INFORMATION_SCHEMA.columns 
---     WHERE table_schema="csuciklo_dndb" 
     WHERE table_schema="csuciklo_COMP420_DnDB" 
 		  AND table_name = in_table_name 
           AND column_key = "PRI"
