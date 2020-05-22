@@ -99,6 +99,7 @@ CREATE VIEW private_campaign_partymember_details
 AS
 	# Handles case where character either doesn't exist, or exists and has inventory items
 	SELECT campaign_id as "ID", 
+           player_id as "player_id",
 		   player_nickname as "Player",
 	       character_details.Name,
            character_details.Gender,
@@ -120,7 +121,8 @@ AS
 	HAVING  character_details.ID IS NOT NULL
 	UNION
     # Case where character exists but has no inventory items
-	SELECT campaign_id as "ID", 
+	SELECT campaign_id as "ID",
+           player_id as "player_id",
 		   player_nickname as "Player",
 	       character_details.Name,
            character_details.Gender,
@@ -368,7 +370,7 @@ DELIMITER ;
 
 # 8. Assisted deletion of one or more records in the indicated table with that match(es) the specified in_conditions
 #    In the case that the ID of the player attempting to delete the record doesn't match the ID of the creator of the record,
-#    the deletion fails.
+#    if such an ID exists for the given table, the deletion fails.
 DROP PROCEDURE IF EXISTS delete_record_in_table;
 DELIMITER $$
 CREATE PROCEDURE delete_record_in_table(in_table VARCHAR(255), in_dm_id VARCHAR(100), in_conditions TEXT, delete_multi BOOLEAN)
@@ -390,20 +392,27 @@ BEGIN
 			END IF;
 	END IF;
     
-    # Prepare creator_condition to be part of full conditional statement
-    IF in_conditions = "" OR in_conditions = " "
+    # If dm_id is a field in the table, prepare the creator condition requirement
+    IF (SELECT "dm_id" IN (SELECT column_name FROM information_schema.columns WHERE table_schema = "csuciklo_COMP420_DnDB" AND table_name = in_table)) = 1
     THEN
-		SET creator_condition = "WHERE ";
-	ELSE
-		SET creator_condition = "AND ";
-	END IF;
+		# Prepare creator_condition to be part of full conditional statement
+		IF in_conditions = "" OR in_conditions = " "
+		THEN
+			SET creator_condition = "WHERE ";
+		ELSE
+			SET creator_condition = "AND ";
+		END IF;
     
-    # Build the condition that the entity can only be deleted by the player/dm who created it
-    IF in_table = "character" OR in_table = "character_details"
-    THEN
-		SET creator_condition = CONCAT(creator_condition, "player_id = '", (SELECT player_id FROM dungeonmaster WHERE dm_id = in_dm_id), "'");
-	ELSE
-		SET creator_condition = CONCAT(creator_condition, "dm_id = '", in_dm_id, "'");
+		# Build the condition that the entity can only be deleted by the player/dm who created it
+		IF in_table = "character" OR in_table = "character_details"
+		THEN
+			SET creator_condition = CONCAT(creator_condition, "player_id = '", (SELECT player_id FROM dungeonmaster WHERE dm_id = in_dm_id), "'");
+		ELSEIF in_table IN ("campaign", "item", "monster", "monsterparty", "race", "spell", "weapon")
+		THEN
+			SET creator_condition = CONCAT(creator_condition, "dm_id = '", in_dm_id, "'");
+		ELSE
+			SET creator_condition = "";
+		END IF;
 	END IF;
     
     # Build the full delete statement, using the entity, initial conditions, creator condition, any ordering, and any limits
@@ -510,7 +519,7 @@ BEGIN
 	ELSEIF entity = "private_campaign_partymember"
     THEN
 		# No setting edits allowed for associative entities
-		SELECT "NO" as "ID", "NO" as "Player", "NO" as "Name", "NO" as "Gender", "NO" as "Overall Level", "NO" as "Level Allocation", "NO" as "Race", "NO" as "Speed",
+		SELECT "NO" as "ID", "NO" as "player_id", "NO" as "Player", "NO" as "Name", "NO" as "Gender", "NO" as "Overall Level", "NO" as "Level Allocation", "NO" as "Race", "NO" as "Speed",
                "NO" as "Size", "NO" as "Backstory", "NO" as "Notes", "NO" as "Base HP", "NO" as "Money", "NO" as "Inventory"
 		UNION ALL
 		SELECT * FROM private_campaign_partymember_details WHERE ID = primary_key_value;
@@ -834,6 +843,10 @@ CREATE TRIGGER delete_character_trigger
 BEFORE DELETE ON `character` 
 FOR EACH ROW
 BEGIN
+  UPDATE partymember
+         SET char_id = NULL
+         WHERE char_id = old.char_id;
+         
   DELETE FROM characterabilityscore WHERE 
     characterabilityscore.char_id = old.char_id;
 
@@ -966,6 +979,44 @@ BEGIN
 END $$
 DELIMITER ;
 
+# 8. Ensures that 'overall level' of character is set to 0 on creation
+DROP TRIGGER IF EXISTS zero_new_character_overall_level;
+DELIMITER $$
+CREATE TRIGGER zero_new_character_overall_level
+BEFORE
+INSERT ON `character`
+FOR EACH ROW
+BEGIN
+	SET NEW.char_overall_level = 0;
+END $$
+DELIMITER ;
+
+# 9. Correctly instantiate character HP on creation
+DROP TRIGGER IF EXISTS instantiate_new_character_hp;
+DELIMITER $$
+CREATE TRIGGER instantiate_new_character_hp
+BEFORE
+INSERT ON `character`
+FOR EACH ROW
+BEGIN
+	SET NEW.char_base_hp = 0;
+    SET NEW.char_remaining_hp = 0;
+END $$
+DELIMITER ;
+
+# 10. Correctly deletes a Monster by removing all associative records linked to that
+#     Monster instance
+DROP TRIGGER IF EXISTS delete_monster;
+DELIMITER $$
+CREATE TRIGGER delete_monster
+BEFORE
+DELETE ON monster
+FOR EACH ROW
+BEGIN
+	DELETE FROM monsterencounter WHERE monster_id = old.monster_id;
+    DELETE FROM monsterabilityscore WHERE monster_id = old.monster_id;
+END $$
+DELIMITER ;
 
 -- ------------------------------------------- Miscellaneous Functions & Procedures ------------------------------------------- --
 
@@ -1387,6 +1438,9 @@ BEGIN
     IF entity = "dungeonmaster" 
     THEN
 		SELECT CONCAT(player_nickname, ' ( ', player_username, ' ) '), "CONCAT(player_nickname, ' ( ', player_username, ' ) ')", dm_id, 'dm_id' FROM dungeonmaster JOIN player USING(player_id); 
+	ELSEIF entity = "player"
+    THEN
+		SELECT CONCAT(player_nickname, ' ( ', player_username, ' ) '), "CONCAT(player_nickname, ' ( ', player_username, ' ) ')", player_id, 'player_id' FROM player;
 	ELSE
 		IF entity = "monsterencounter" 
         THEN 
@@ -1682,6 +1736,29 @@ BEGIN
 				   AND column_name != in_id_colname
 			 LIMIT 1
 			);
+END $$
+DELIMITER ;
+
+# 33. Retrieves newest primary key value for given table, even if not auto-increment key value
+DROP PROCEDURE IF EXISTS get_most_recent_pk_val_and_pk_colname;
+DELIMITER $$
+CREATE PROCEDURE get_most_recent_pk_val_and_pk_colname(in_table VARCHAR(255))
+BEGIN
+	DECLARE pk_name VARCHAR(255) DEFAULT "";
+    DECLARE usable_tbl_name VARCHAR(255) DEFAULT "";
+    
+    IF in_table = "character" OR in_table = "language"
+    THEN
+		SET usable_tbl_name = CONCAT("`", in_table, "`");
+	ELSE
+		SELECT in_table INTO usable_tbl_name;
+	END IF;
+        
+    SELECT get_primary_key_name_from_table_name(in_table) INTO pk_name;
+    
+    SET @query = CONCAT("SELECT IFNULL(MAX(", pk_name, "), 0), '", pk_name, "' FROM ", usable_tbl_name, "");
+	PREPARE stmt FROM @query;
+	EXECUTE stmt;
 END $$
 DELIMITER ;
                                     

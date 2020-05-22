@@ -34,21 +34,21 @@
         <h1 class="page_title">My Campaigns</h1>
         <div class="campaign_previews">
             {% if campaign_previews == None %}
-            <p>No campaigns found :'(</p>
+                <p>No campaigns found :'(</p>
             {% else %}
-                            {% for preview in campaign_previews %}
-                                <form action="{{url_for('entity_details', entity=preview[0], entity_id=preview[2][1])}}">
-                                    <div class="preview-item">
-                                        <button name="{{preview[0]}}_btn" value="{{preview[2][0]}}={{preview[2][1]}}">
-                                            <h1>{{preview[0]}}</h1>
-                                            {% for col_and_val in preview[3] %}
-                                                <p>{{col_and_val[0]}} : {{col_and_val[1]}}</p>
-                                            {% endfor %}
-                                        </button>
-                                    </div>
-                                </form>
+                {% for preview in campaign_previews %}
+                    <form action="{{url_for('entity_details', entity=preview[0], entity_id=preview[2][1])}}">
+                        <div class="preview-item">
+                            <button name="{{preview[0]}}_btn" value="{{preview[2][0]}}={{preview[2][1]}}">
+                                <h1>{{preview[0]}}</h1>
+                                {% for col_and_val in preview[3] %}
+                                    <p>{{col_and_val[0]}} : {{col_and_val[1]}}</p>
                                 {% endfor %}
-                </div>
+                            </button>
+                        </div>
+                    </form>
+                {% endfor %}
             {% endif %}
+        </div>
     </body>
 </html>

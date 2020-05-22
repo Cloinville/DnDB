@@ -657,3 +657,8 @@ hr{
     background-color: black;
     border: 1px solid rgb(2, 27, 1);
 }
+
+textarea[readonly]{
+    background-color: #6db16d;
+    border: none;
+}
